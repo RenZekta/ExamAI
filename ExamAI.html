@@ -1,0 +1,1358 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ExamAI — exam prep</title>
+<style>
+  :root{
+    --bg:#0e1016; --panel:#161923; --panel-2:#1d2130; --line:#2a3040;
+    --fg:#e7eaf3; --muted:#8d96ad; --acc:#5b8def; --acc-2:#3f6fd8;
+    --ok:#2fbf71; --bad:#ef5350; --warn:#f0a93b; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Arial,sans-serif;}
+  button,input,textarea{font:inherit;color:inherit}
+  a{color:var(--acc)}
+
+  .topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:10px;
+          padding:10px 16px;background:rgba(14,16,22,.94);backdrop-filter:blur(8px);
+          border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brand{font-weight:700;letter-spacing:.3px;margin-right:6px;white-space:nowrap}
+  .spacer{flex:1}
+  .score{color:var(--muted);font-size:14px;white-space:nowrap}
+
+  .menu{position:relative}
+  .menu-btn{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+            padding:8px 12px;cursor:pointer;white-space:nowrap}
+  .menu-btn:hover{background:var(--panel-2)}
+  .menu .caret{opacity:.6;font-size:11px}
+  .menu-panel{display:none;position:absolute;top:calc(100% + 8px);left:0;min-width:290px;
+              background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+              padding:12px;box-shadow:0 18px 40px rgba(0,0,0,.55);z-index:60}
+  .menu-panel.wide{min-width:340px}
+  .menu.open .menu-panel{display:block}
+  .menu-panel .btn{display:block;width:100%;margin-bottom:8px;text-align:left}
+  .hint{color:var(--muted);font-size:13px;margin-top:8px;word-break:break-word}
+  .field{display:block;margin-bottom:10px;font-size:13px;color:var(--muted)}
+  .field input{display:block;width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;
+               border:1px solid var(--line);background:var(--bg)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row .btn{margin-bottom:0}
+
+  .btn{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+       padding:8px 12px;cursor:pointer}
+  .btn:hover{background:#232838;border-color:#3d465e}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+  .btn.primary:hover{background:var(--acc-2)}
+  .btn.danger{color:#ffb4b4}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+
+  .drop-zone{position:relative;display:flex;flex-direction:column;align-items:center;
+             justify-content:center;gap:4px;width:100%;margin-bottom:8px;padding:16px 12px;
+             border:1.5px dashed #3a4360;border-radius:10px;background:rgba(91,141,239,.04);
+             color:var(--muted);font-size:13px;text-align:center;cursor:pointer;
+             transition:background .15s,border-color .15s,color .15s}
+  .drop-zone:hover{background:rgba(91,141,239,.09);border-color:#4a5680;color:var(--fg)}
+  .drop-zone .dz-icon{font-size:22px;line-height:1;margin-bottom:2px}
+  .drop-zone .dz-title{color:var(--fg);font-weight:600;font-size:13px}
+  .drop-zone .dz-sub{color:var(--muted);font-size:12px}
+  .drop-zone.dragover{background:rgba(91,141,239,.18);border-color:var(--acc);color:var(--fg)}
+  .drop-zone.dragover .dz-icon{transform:scale(1.1)}
+  .drop-zone input[type=file]{position:absolute;width:1px;height:1px;opacity:0;left:0;top:0}
+
+  .tabs{display:flex;gap:8px;padding:16px 16px 0}
+  .tabs button{background:transparent;border:1px solid var(--line);border-radius:999px;
+               padding:8px 16px;cursor:pointer;color:var(--muted)}
+  .tabs button.active{background:var(--panel);color:var(--fg);border-color:var(--acc)}
+  main{padding:16px;max-width:1400px;margin:0 auto}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+         padding:14px;margin-bottom:16px}
+  .topic-check{display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;
+               background:var(--panel-2);border:1px solid var(--line);border-radius:999px;
+               padding:5px 12px;font-size:14px;cursor:pointer}
+  .topic-check .count{color:var(--muted);font-size:12px}
+  .topic-check input{accent-color:var(--acc)}
+  #poll-count,#gen-per-topic{width:70px;padding:7px 9px;border-radius:8px;
+              border:1px solid var(--line);background:var(--bg)}
+
+  /* ---------- poll cards ---------- */
+  .qcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+         padding:16px;margin-bottom:14px}
+  .qhead{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .chip{background:#22304d;color:#a9c3ff;border-radius:999px;padding:3px 10px;font-size:12px}
+  .qnum{color:var(--muted);font-size:13px}
+  .qtext{font-weight:600;margin-bottom:12px}
+  .options{display:grid;gap:8px}
+  .option{text-align:left;background:var(--panel-2);border:1px solid var(--line);
+          border-radius:9px;padding:10px 12px;cursor:pointer;transition:.12s}
+  .option:hover:not(:disabled){background:#232838;border-color:#3d465e}
+  .option:disabled{cursor:default}
+  .option.correct{background:rgba(47,191,113,.16);border-color:var(--ok)}
+  .option.wrong{background:rgba(239,83,80,.16);border-color:var(--bad)}
+
+  .explain{margin-top:12px;padding:12px;border-radius:9px;background:var(--panel-2);
+           border:1px solid var(--line);font-size:14px}
+  .overall-explain{margin-top:6px;color:var(--fg);font-size:13px;line-height:1.5}
+  .option-notes{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .notes-title{font-size:11px;text-transform:uppercase;letter-spacing:.6px;
+               color:var(--muted);margin-bottom:6px;font-weight:600}
+  .option-notes ul{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+  .option-notes li{padding:8px 10px;border-radius:7px;background:var(--bg);
+                   border:1px solid var(--line);font-size:13px}
+  .option-notes li.note-correct{border-color:var(--ok);background:rgba(47,191,113,.08)}
+  .option-notes li.note-wrong{border-color:var(--bad);background:rgba(239,83,80,.08)}
+  .option-notes .note-mark{font-weight:700;margin-right:4px}
+  .option-notes .note-opt{color:var(--fg);font-weight:500}
+  .option-notes .note-comment{color:var(--muted);margin-top:4px;font-size:12.5px;line-height:1.5}
+  .option-notes .note-comment.note-empty{font-style:italic;opacity:.5}
+  .ok{color:var(--ok)} .bad{color:var(--bad)}
+
+  .wq{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+      padding:16px;margin-bottom:14px}
+  .wq-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .wq-body{display:block}
+  .wq-body.split{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:900px){.wq-body.split{grid-template-columns:1fr}}
+  .wq-left h3,.wq-right h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;
+                           letter-spacing:.6px;color:var(--muted)}
+  .wq-input{width:100%;min-height:170px;resize:vertical;padding:10px 12px;border-radius:9px;
+            border:1px solid var(--line);background:var(--bg)}
+  .wq-actions{margin-top:10px}
+  .wq-right{border-left:1px solid var(--line);padding-left:18px}
+  @media (max-width:900px){.wq-right{border-left:none;padding-left:0}}
+  .ai-out{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:12px;
+          min-height:170px;font-size:14px}
+  .ai-out h4{margin:10px 0 4px;font-size:14px;color:#a9c3ff}
+  .ai-out p{margin:4px 0}
+  .ai-out ul{margin:4px 0 4px 18px;padding:0}
+  .spinner{color:var(--muted)}
+  .streaming-cursor{color:var(--acc);animation:blink 1s step-start infinite;margin-left:1px}
+  @keyframes blink{50%{opacity:0}}
+
+  .ref-answer{margin:10px 0 12px;background:var(--bg);border:1px solid var(--line);
+              border-radius:9px;padding:8px 12px;font-size:13px}
+  .ref-answer summary{cursor:pointer;color:#a9c3ff;user-select:none;outline:none}
+  .ref-answer[open] summary{margin-bottom:6px}
+  .ref-answer .ref-body{white-space:pre-wrap;color:var(--fg);font-size:14px;line-height:1.5}
+  .ref-note{color:var(--muted);font-size:12px;margin-top:6px;font-style:italic}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;
+                  align-items:center;justify-content:center;z-index:100;padding:20px}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+         padding:18px;width:min(820px,100%);max-height:90vh;display:flex;flex-direction:column}
+  .modal h3{margin:0 0 10px}
+  .modal textarea{flex:1;min-height:320px;resize:vertical;padding:10px 12px;border-radius:9px;
+                  border:1px solid var(--line);background:var(--bg);
+                  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+  .modal .row{margin-top:12px}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">🎓 ExamAI</div>
+
+  <div class="menu" id="menu-import">
+    <button class="menu-btn" id="btn-menu-import" type="button">📥 Import questions + poll <span class="caret">▾</span></button>
+    <div class="menu-panel">
+
+      <label class="drop-zone" id="md-dropzone" for="md-file">
+        <span class="dz-icon">📄</span>
+        <span class="dz-title">Drop a .md file here</span>
+        <span class="dz-sub">or click to browse</span>
+        <input type="file" id="md-file" accept=".md,.markdown,.txt,text/markdown" />
+      </label>
+
+      <button class="btn" id="btn-open-paste" type="button">✏️ Paste / edit .md</button>
+      <button class="btn" id="btn-copy-prompt" type="button">📋 Copy prompt guide</button>
+      <button class="btn" id="btn-load-sample" type="button">🧪 Load built-in sample</button>
+      <button class="btn danger" id="btn-clear" type="button">🗑 Clear imported data</button>
+      <div class="hint" id="import-status">No questions loaded</div>
+    </div>
+  </div>
+
+  <div class="menu" id="menu-api">
+    <button class="menu-btn" id="btn-menu-api" type="button">⚙️ API <span class="caret">▾</span></button>
+    <div class="menu-panel wide">
+      <label class="field">Base URL
+        <input id="api-base" type="text" spellcheck="false" placeholder="http://localhost:1234/v1" />
+      </label>
+      <label class="field">API key
+        <input id="api-key" type="password" spellcheck="false" placeholder="(empty)" />
+      </label>
+      <label class="field">Model
+        <input id="api-model" type="text" spellcheck="false" placeholder="(auto — first from /models)" />
+      </label>
+      <div class="row">
+        <button class="btn" id="btn-api-save" type="button">Save</button>
+        <button class="btn" id="btn-api-test" type="button">Test connection</button>
+      </div>
+      <div class="hint" id="api-status"></div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <div class="score" id="global-score"></div>
+</header>
+
+<nav class="tabs">
+  <button type="button" data-tab="poll" class="active">1 · Practice poll</button>
+  <button type="button" data-tab="written">2 · Written exam (AI)</button>
+</nav>
+
+<main>
+  <section id="tab-poll">
+    <div class="panel">
+      <div class="row" style="margin-bottom:10px">
+        <strong>Subjects:</strong>
+        <div id="topic-list"><span class="hint">Import a question bank first.</span></div>
+      </div>
+      <div class="row">
+        <label>Questions: <input type="number" id="poll-count" min="1" max="200" value="5" /></label>
+        <button class="btn primary" id="btn-poll-start" type="button">▶ Start poll</button>
+        <button class="btn" id="btn-poll-reset" type="button">↺ Reset answers</button>
+        <span class="hint" id="poll-progress"></span>
+      </div>
+      <div class="hint" style="margin-top:6px">
+        Poll questions and written topics are independent lists — the poll can have
+        several questions per topic, all aimed at covering the topic in full.
+      </div>
+    </div>
+    <div id="poll-questions"></div>
+  </section>
+
+  <section id="tab-written" hidden>
+    <div class="panel">
+      <div class="row">
+        <button class="btn primary" id="btn-gen" type="button">🎲 Generate questions</button>
+        <label>Topics per subject:
+          <input type="number" id="gen-per-topic" min="1" max="50" value="1" />
+        </label>
+        <span class="hint">Pulls N random topics from <em>every</em> subject. Write your answer, then submit it for AI review.</span>
+      </div>
+      <div class="hint" id="written-status"></div>
+    </div>
+    <div id="written-questions"></div>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="paste-modal" hidden>
+  <div class="modal">
+    <h3>Paste Markdown question bank</h3>
+    <textarea id="paste-area" spellcheck="false"
+      placeholder="## Subject&#10;&#10;### Poll&#10;1. Question? - wrong {why wrong} - *right {why right} - wrong {why} - wrong {why} // overall&#10;&#10;### Written&#10;1. Verbatim exam topic line.&#10;> Baseline answer line 1&#10;> Baseline answer line 2"></textarea>
+    <div class="row">
+      <button class="btn primary" id="btn-paste-import" type="button">Import</button>
+      <button class="btn" id="btn-paste-cancel" type="button">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ExamAI — single-file app
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const DEFAULT_BASE = 'http://localhost:1234/v1';
+
+/* ============================================================
+   1. MARKDOWN PARSER
+   Two independent lists per subject:
+     - questions[] → Section 1 poll items {text, answers[], explanation}
+     - topics[]    → Section 2 verbatim topic lines {text, baseline}
+   Each answer: { text, correct, comment }.
+   Comment is extracted from a trailing {...} block (inline or same-line).
+   ============================================================ */
+
+/* Split `s` by `sep` but ignore separators inside {...}. */
+function splitTopLevel(s, sep) {
+  const parts = [];
+  let depth = 0, cur = '';
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch === '{') { depth++; cur += ch; continue; }
+    if (ch === '}') { depth = Math.max(0, depth - 1); cur += ch; continue; }
+    if (depth === 0 && s.substr(i, sep.length) === sep) {
+      parts.push(cur);
+      cur = '';
+      i += sep.length - 1;
+      continue;
+    }
+    cur += ch;
+  }
+  parts.push(cur);
+  return parts;
+}
+
+/* Find the first top-level `//` (outside braces). Returns -1 if none. */
+function findTopLevelDoubleSlash(s) {
+  let depth = 0;
+  for (let i = 0; i < s.length - 1; i++) {
+    const ch = s[i];
+    if (ch === '{') { depth++; continue; }
+    if (ch === '}') { depth = Math.max(0, depth - 1); continue; }
+    if (depth === 0 && ch === '/' && s[i + 1] === '/') return i;
+  }
+  return -1;
+}
+
+/* Parse a single answer part: extracts trailing {comment}, leading * marker. */
+function parseAnswerPart(raw) {
+  let s = String(raw).trim();
+  let comment = '';
+
+  // Trailing {...}
+  if (s.endsWith('}')) {
+    const closeIdx = s.length - 1;
+    const openIdx = s.lastIndexOf('{', closeIdx);
+    if (openIdx !== -1) {
+      comment = s.slice(openIdx + 1, closeIdx).trim();
+      s = s.slice(0, openIdx).trim();
+    }
+  }
+
+  s = s.replace(/[,;]$/, '').trim();
+
+  let correct = false;
+  if (/^\*\*/.test(s)) { correct = true; s = s.slice(2).replace(/\*\*\s*$/, '').trim(); }
+  else if (/^\*/.test(s)) { correct = true; s = s.slice(1).trim(); }
+
+  return { text: s, correct, comment };
+}
+
+function tryParseInline(body) {
+  let explanation = '';
+  const ci = findTopLevelDoubleSlash(body);
+  if (ci !== -1) {
+    explanation = body.slice(ci + 2).trim();
+    body = body.slice(0, ci).trim();
+  }
+  const parts = splitTopLevel(body, ' - ');
+  if (parts.length >= 5) {
+    return {
+      question: parts.slice(0, parts.length - 4).join(' - ').trim(),
+      answers: parts.slice(parts.length - 4).map(parseAnswerPart),
+      explanation,
+    };
+  }
+  return null;
+}
+
+function parseMarkdown(md) {
+  const subjects = [];
+  let subject = null;
+  let mode = 'poll';
+  let q = null;
+
+  const finishQ = () => {
+    if (q && subject && q.answers.length >= 2) subject.questions.push(q);
+    q = null;
+  };
+
+  for (const raw of String(md).split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+
+    const sub = line.match(/^(#{3,6})\s+(.*)$/);
+    if (sub) {
+      finishQ();
+      const t = sub[2].toLowerCase();
+      mode = /written|open|essay|baseline|reference|эталон|тем|письмен|открыт|развёрнут/.test(t)
+        ? 'written' : 'poll';
+      continue;
+    }
+
+    const h = line.match(/^(#{1,2})\s+(.*)$/);
+    if (h) {
+      finishQ();
+      const name = h[2].trim();
+      if (!name) continue;
+      subject = { name, questions: [], topics: [] };
+      subjects.push(subject);
+      mode = 'poll';
+      continue;
+    }
+
+    if (!subject) {
+      subject = { name: 'Общее', questions: [], topics: [] };
+      subjects.push(subject);
+      mode = 'poll';
+    }
+
+    if (line === '>' || /^>\s?/.test(line)) {
+      const content = line === '>' ? '' : line.replace(/^>\s?/, '');
+      if (mode === 'written' && subject.topics.length) {
+        const last = subject.topics[subject.topics.length - 1];
+        last.baseline = (last.baseline ? last.baseline + '\n' : '') + content;
+      } else if (q) {
+        const t = content.trim();
+        if (t) q.explanation = q.explanation ? q.explanation + ' ' + t : t;
+      }
+      continue;
+    }
+
+    if (line.startsWith('//')) {
+      if (q) {
+        const t = line.replace(/^\/\/\s*/, '').trim();
+        if (t) q.explanation = q.explanation ? q.explanation + ' ' + t : t;
+      }
+      continue;
+    }
+
+    const qm = line.match(/^(\d+)[.)]\s+(.*)$/);
+    if (qm) {
+      finishQ();
+      const body = qm[2].trim();
+      if (mode === 'written') {
+        subject.topics.push({ text: body, baseline: '' });
+      } else {
+        const inline = tryParseInline(body);
+        if (inline) {
+          q = {
+            text: inline.question,
+            answers: inline.answers.map(cleanAnswer_),
+            explanation: inline.explanation,
+          };
+        } else {
+          q = { text: body, answers: [], explanation: '' };
+        }
+      }
+      continue;
+    }
+
+    if (/^[-•+]\s+/.test(line) && q && mode === 'poll') {
+      q.answers.push(cleanAnswer_(line.replace(/^[-•+]\s+/, '')));
+      continue;
+    }
+  }
+  finishQ();
+
+  return subjects.filter((s) => s.questions.length > 0 || s.topics.length > 0);
+}
+
+/* Alias so the inline branch above stays simple; ensures every answer object
+   has {text, correct, comment}. */
+function cleanAnswer_(raw) {
+  if (raw && typeof raw === 'object' && 'text' in raw) {
+    return { text: raw.text, correct: !!raw.correct, comment: raw.comment || '' };
+  }
+  return parseAnswerPart(raw);
+}
+
+/* ============================================================
+   2. STATE + PERSISTENCE
+   ============================================================ */
+
+const state = {
+  subjects: [],
+  poll: { items: [], answered: 0, correct: 0 },
+  written: [],
+};
+
+function saveQuestions() {
+  try { localStorage.setItem('examai.questions', JSON.stringify(state.subjects)); } catch (e) {}
+}
+function loadQuestions() {
+  try {
+    const raw = localStorage.getItem('examai.questions');
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (Array.isArray(data) && data.length) state.subjects = data;
+  } catch (e) {}
+}
+
+function setImportStatus(msg, cls) {
+  const el = $('#import-status');
+  el.innerHTML = cls ? `<span class="${cls}">${esc(msg)}</span>` : esc(msg);
+}
+
+function refreshImportStatus() {
+  const totalQ = state.subjects.reduce((n, s) => n + s.questions.length, 0);
+  const totalT = state.subjects.reduce((n, s) => n + (s.topics ? s.topics.length : 0), 0);
+  const withBase = state.subjects.reduce(
+    (n, s) => n + (s.topics ? s.topics.filter((t) => t.baseline && t.baseline.trim()).length : 0), 0);
+  const usable = state.subjects.reduce(
+    (n, s) => n + s.questions.filter((q) => q.answers.some((a) => a.correct)).length, 0);
+  const withComments = state.subjects.reduce(
+    (n, s) => n + s.questions.filter((q) => q.answers.some((a) => a.comment)).length, 0);
+  if (!totalQ && !totalT) { setImportStatus('No questions loaded'); return; }
+  setImportStatus(
+    `${state.subjects.length} subject(s) · ${totalQ} poll question(s) ` +
+    `(${usable} scorable, ${withComments} with per-option comments) · ` +
+    `${totalT} written topic(s), ${withBase} with a baseline answer.`
+  );
+}
+
+/* ============================================================
+   3. IMPORT
+   ============================================================ */
+
+function importMarkdown(md, sourceLabel) {
+  const parsed = parseMarkdown(md);
+  const totalQ = parsed.reduce((n, s) => n + s.questions.length, 0);
+  const totalT = parsed.reduce((n, s) => n + s.topics.length, 0);
+  if (!totalQ && !totalT) {
+    setImportStatus('⚠️ Nothing could be parsed. Check the format (see "Copy prompt guide").', 'bad');
+    return false;
+  }
+  state.subjects = parsed;
+  state.poll = { items: [], answered: 0, correct: 0 };
+  state.written = [];
+  saveQuestions();
+  renderTopicList();
+  renderPoll();
+  renderWritten();
+  refreshImportStatus();
+  setImportStatus(`✅ Imported ${totalQ} poll question(s) and ${totalT} written topic(s) from ${sourceLabel}.`);
+  return true;
+}
+
+/* ============================================================
+   4. SECTION 1 — POLL
+   ============================================================ */
+
+function renderTopicList() {
+  const el = $('#topic-list');
+  if (!state.subjects.length) {
+    el.innerHTML = '<span class="hint">Import a question bank first.</span>';
+    return;
+  }
+  el.innerHTML = '';
+  state.subjects.forEach((s, i) => {
+    const pollCount = s.questions.filter((q) => q.answers.some((a) => a.correct)).length;
+    const topicCount = (s.topics || []).length;
+    const label = document.createElement('label');
+    label.className = 'topic-check';
+    label.innerHTML =
+      `<input type="checkbox" value="${i}" checked /> ${esc(s.name)} ` +
+      `<span class="count">${pollCount} poll · ${topicCount} written</span>`;
+    el.appendChild(label);
+  });
+}
+
+function updatePollProgress() {
+  const { items, answered, correct } = state.poll;
+  const txt = items.length ? `${answered} / ${items.length} answered — ${correct} correct` : '';
+  $('#poll-progress').textContent = txt;
+  $('#global-score').textContent = items.length ? `Score: ${correct}/${items.length}` : '';
+}
+
+function startPoll() {
+  const checked = $$('#topic-list input:checked').map((i) => Number(i.value));
+  if (!checked.length) { setImportStatus('⚠️ Select at least one subject.', 'bad'); return; }
+
+  let pool = [];
+  checked.forEach((i) => {
+    const s = state.subjects[i];
+    if (!s) return;
+    s.questions.forEach((q) => {
+      if (q.answers.some((a) => a.correct)) pool.push({ subject: s.name, ...q });
+    });
+  });
+  if (!pool.length) { setImportStatus('⚠️ No poll questions with a marked correct answer.', 'bad'); return; }
+
+  shuffle(pool);
+  const requested = Math.max(1, Number($('#poll-count').value) || 5);
+  const n = Math.min(requested, pool.length);
+
+  state.poll.items = pool.slice(0, n).map((q) => ({ ...q, chosen: null }));
+  state.poll.answered = 0;
+  state.poll.correct = 0;
+  renderPoll();
+}
+
+function renderPoll() {
+  const container = $('#poll-questions');
+  container.innerHTML = '';
+  state.poll.items.forEach((item, idx) => {
+    const card = document.createElement('article');
+    card.className = 'qcard';
+    card.dataset.idx = String(idx);
+    card.innerHTML =
+      `<div class="qhead"><span class="chip">${esc(item.subject)}</span>` +
+      `<span class="qnum">Question ${idx + 1}</span></div>` +
+      `<div class="qtext">${esc(item.text)}</div>` +
+      `<div class="options"></div>` +
+      `<div class="explain" hidden></div>`;
+
+    const opts = card.querySelector('.options');
+    item.answers.forEach((a, ai) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'option';
+      btn.dataset.answerIndex = String(ai);
+      btn.textContent = a.text;
+      btn.addEventListener('click', () => answerPoll(idx, ai));
+      opts.appendChild(btn);
+    });
+    container.appendChild(card);
+  });
+  updatePollProgress();
+}
+
+function answerPoll(idx, ai) {
+  const item = state.poll.items[idx];
+  if (!item || item.chosen !== null) return;
+  item.chosen = ai;
+
+  const card = $(`.qcard[data-idx="${idx}"]`);
+  const buttons = $$('.option', card);
+  const correctIndex = item.answers.findIndex((a) => a.correct);
+  const isCorrect = ai === correctIndex;
+
+  buttons.forEach((b, i) => {
+    b.disabled = true;
+    if (i === correctIndex) b.classList.add('correct');
+    if (i === ai && !isCorrect) b.classList.add('wrong');
+  });
+
+  state.poll.answered++;
+  if (isCorrect) state.poll.correct++;
+
+  const ex = card.querySelector('.explain');
+  ex.hidden = false;
+  ex.innerHTML = buildPollFeedback(item, ai, correctIndex, isCorrect);
+
+  updatePollProgress();
+}
+
+function buildPollFeedback(item, ai, correctIndex, isCorrect) {
+  let html = `<strong class="${isCorrect ? 'ok' : 'bad'}">` +
+             `${isCorrect ? '✅ Correct' : '❌ Incorrect'}</strong>`;
+
+  if (item.explanation) {
+    html += `<div class="overall-explain">${esc(item.explanation)}</div>`;
+  }
+
+  const hasAnyComment = item.answers.some((a) => a.comment);
+  if (hasAnyComment) {
+    html += `<div class="option-notes"><div class="notes-title">Why each option is right or wrong</div><ul>`;
+    item.answers.forEach((a, i) => {
+      const isPicked = i === ai;
+      const marks = [];
+      if (a.correct) marks.push('✅');
+      if (isPicked && !a.correct) marks.push('❌');
+      const cls = a.correct ? 'note-correct' : (isPicked ? 'note-wrong' : '');
+      html += `<li class="${cls}">`;
+      html += `<span class="note-mark">${marks.join(' ') || '•'}</span>`;
+      html += `<span class="note-opt">${esc(a.text)}</span>`;
+      if (a.comment) {
+        html += `<div class="note-comment">${esc(a.comment)}</div>`;
+      } else {
+        html += `<div class="note-comment note-empty">No comment for this option.</div>`;
+      }
+      html += `</li>`;
+    });
+    html += `</ul></div>`;
+  }
+
+  return html;
+}
+
+function resetPoll() {
+  state.poll.items.forEach((item, idx) => {
+    item.chosen = null;
+    const card = $(`.qcard[data-idx="${idx}"]`);
+    if (!card) return;
+    $$('.option', card).forEach((b) => { b.disabled = false; b.classList.remove('correct', 'wrong'); });
+    const ex = card.querySelector('.explain');
+    ex.hidden = true;
+    ex.innerHTML = '';
+  });
+  state.poll.answered = 0;
+  state.poll.correct = 0;
+  updatePollProgress();
+}
+
+/* ============================================================
+   5. SECTION 2 — WRITTEN + AI (streaming)
+   ============================================================ */
+
+function generateWritten() {
+  const subs = state.subjects.filter((s) => (s.topics || []).length);
+  if (!subs.length) {
+    $('#written-status').innerHTML =
+      '<span class="bad">No written topics in the bank. Add a "### Written" section to your .md.</span>';
+    return;
+  }
+
+  const perTopic = Math.max(1, Number($('#gen-per-topic').value) || 1);
+
+  const items = [];
+  subs.forEach((s) => {
+    const pool = shuffle(s.topics.slice());
+    const take = Math.min(perTopic, pool.length);
+    for (let i = 0; i < take; i++) {
+      items.push({
+        subject: s.name,
+        question: pool[i],
+        userAnswer: '',
+        ai: '',
+      });
+    }
+  });
+
+  state.written = items;
+  $('#written-status').textContent =
+    `Generated ${items.length} written question(s) — up to ${perTopic} per subject across ${subs.length} subject(s) — at ${new Date().toLocaleTimeString()}.`;
+  renderWritten();
+}
+
+function renderWritten() {
+  const c = $('#written-questions');
+  c.innerHTML = '';
+  state.written.forEach((w, i) => {
+    const card = document.createElement('article');
+    card.className = 'wq';
+    card.dataset.idx = String(i);
+
+    const hasBaseline = !!(w.question.baseline && w.question.baseline.trim());
+    const refBlock = hasBaseline
+      ? `<details class="ref-answer">
+           <summary>📖 Show reference answer</summary>
+           <div class="ref-body">${esc(w.question.baseline)}</div>
+           <div class="ref-note">Reference only — this is a book summary, not a required 1:1 answer.</div>
+         </details>`
+      : `<div class="hint" style="margin:6px 0 10px">No baseline answer provided for this topic.</div>`;
+
+    card.innerHTML =
+      `<div class="wq-head"><span class="chip">${esc(w.subject)}</span>` +
+      `<span class="qnum">Question ${i + 1}</span></div>` +
+      `<div class="wq-body">` +
+        `<div class="wq-left">` +
+          `<h3>Question</h3>` +
+          `<div class="qtext">${esc(w.question.text)}</div>` +
+          refBlock +
+          `<textarea class="wq-input" placeholder="Write your answer here…"></textarea>` +
+          `<div class="wq-actions"><button class="btn primary btn-submit" type="button">Submit for AI review</button></div>` +
+        `</div>` +
+        `<div class="wq-right" hidden>` +
+          `<h3>AI feedback</h3>` +
+          `<div class="ai-out"></div>` +
+        `</div>` +
+      `</div>`;
+    card.querySelector('.btn-submit').addEventListener('click', () => submitWritten(i));
+    c.appendChild(card);
+  });
+}
+
+async function submitWritten(i) {
+  const w = state.written[i];
+  const card = $(`.wq[data-idx="${i}"]`);
+  if (!w || !card) return;
+
+  const ta = card.querySelector('.wq-input');
+  const answer = ta.value.trim();
+  if (!answer) { alert('Please write your answer first.'); return; }
+
+  w.userAnswer = answer;
+  ta.disabled = true;
+  const btn = card.querySelector('.btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Reviewing…';
+
+  card.querySelector('.wq-body').classList.add('split');
+  const right = card.querySelector('.wq-right');
+  right.hidden = false;
+  const out = card.querySelector('.ai-out');
+  out.innerHTML = '<div class="spinner">⏳ Analyzing your answer…</div>';
+
+  const messages = buildGradingMessages(w);
+  let acc = '';
+
+  try {
+    await callAIStream(messages, (chunk) => {
+      acc += chunk;
+      out.innerHTML = renderMarkdownLite(acc) +
+        '<span class="streaming-cursor">▍</span>';
+    });
+    w.ai = acc;
+    out.innerHTML = renderMarkdownLite(acc);
+    btn.textContent = 'Re-submit';
+  } catch (e) {
+    try {
+      out.innerHTML = '<div class="spinner">⏳ Streaming unavailable, retrying without stream…</div>';
+      const text = await callAI(messages);
+      w.ai = text;
+      out.innerHTML = renderMarkdownLite(text);
+      btn.textContent = 'Re-submit';
+    } catch (e2) {
+      out.innerHTML =
+        `<div class="bad">⚠️ ${esc(e2.message)}</div>` +
+        `<details style="margin-top:10px"><summary>Prompt that would have been sent</summary>` +
+        `<pre style="white-space:pre-wrap;font-size:12px">${esc(JSON.stringify(messages, null, 2))}</pre></details>`;
+      btn.textContent = 'Retry';
+    }
+  } finally {
+    btn.disabled = false;
+    ta.disabled = false;
+  }
+}
+
+function buildGradingMessages(w) {
+  const hasBaseline = !!(w.question.baseline && w.question.baseline.trim());
+
+  const system = [
+    `You are a supportive university tutor and examiner in the discipline "${w.subject}".`,
+    `Your job is to grade a student's free-form answer to an exam question AND to help them prepare better.`,
+    `Your PRIMARY goal is to help the student improve — not to be an emotionless grading mechanism.`,
+    `Be encouraging, constructive and concrete: praise what is right, gently point out mistakes, and suggest how to strengthen the answer.`,
+    `Write your entire feedback in the SAME LANGUAGE as the question.`,
+    hasBaseline
+      ? `A reference ("baseline") answer is provided below. Treat it as a book summary / model answer, NOT as a checklist the student must reproduce 1:1. The student is NOT required to recite every point — reward correctly-reasoned shorter answers and additional correct facts the student brings in. Use the baseline only as a map of what a strong answer could cover.`
+      : `No reference answer was provided — grade by your own expert judgement.`,
+    ``,
+    `Reply using exactly this structure (Markdown):`,
+    ``,
+    `## Оценка`,
+    `X/10 — one-sentence verdict, framed encouragingly.`,
+    ``,
+    `## Что верно`,
+    `- ... (specific points the student got right)`,
+    ``,
+    `## Что неверно или неточно`,
+    `- ... (gently explain the misconception)`,
+    ``,
+    `## Что можно добавить`,
+    `- ... (optional extras that would strengthen the answer; not mandatory)`,
+    ``,
+    `## Образцовый ответ`,
+    hasBaseline
+      ? `Reproduce or refine the reference answer, in a natural exam-style form.`
+      : `A short model answer (5–10 sentences).`,
+    ``,
+    `## Совет`,
+    `One short, friendly tip for how the student can improve on this topic.`,
+  ].join('\n');
+
+  const userLines = [
+    `Дисциплина: ${w.subject}`,
+    `Вопрос: ${w.question.text}`,
+  ];
+
+  if (hasBaseline) {
+    userLines.push(
+      ``,
+      `Эталонный (базовый) ответ. Это конспект из учебника — студент НЕ обязан повторять его дословно, и не нужно снижать оценку за отсутствие мелких деталей. Используй его как ориентир:`,
+      `"""`,
+      w.question.baseline,
+      `"""`,
+    );
+  }
+
+  userLines.push(
+    ``,
+    `Ответ студента:`,
+    `"""`,
+    w.userAnswer,
+    `"""`,
+    ``,
+    `Оцени ответ студента. Сравни с эталоном, но не требуй дословного совпадения — оценивай по существу. Будь полезным и поддерживающим: цель — помочь студенту подготовиться лучше, а не просто выставить балл.`,
+    `Отметь: (1) что студент понял верно, (2) где ошибся или неточно сформулировал, (3) какие дополнительные моменты могли бы усилить ответ, (4) короткий дружеский совет.`,
+  );
+
+  return [
+    { role: 'system', content: system },
+    { role: 'user', content: userLines.join('\n') },
+  ];
+}
+
+function getApiConfig() {
+  return {
+    base: (localStorage.getItem('examai.base') || DEFAULT_BASE).replace(/\/+$/, ''),
+    key: localStorage.getItem('examai.key') || '',
+    model: localStorage.getItem('examai.model') || '',
+  };
+}
+
+function authHeaders(cfg) {
+  const h = { 'Content-Type': 'application/json' };
+  if (cfg.key) h['Authorization'] = 'Bearer ' + cfg.key;
+  return h;
+}
+
+async function fetchFirstModel(cfg) {
+  const res = await fetch(cfg.base + '/models', { headers: cfg.key ? { Authorization: 'Bearer ' + cfg.key } : {} });
+  if (!res.ok) throw new Error(`Cannot list models (HTTP ${res.status}) at ${cfg.base}/models`);
+  const data = await res.json();
+  const id = data && data.data && data.data[0] && data.data[0].id;
+  if (!id) throw new Error('The /models endpoint returned no models.');
+  return id;
+}
+
+async function callAI(messages) {
+  const cfg = getApiConfig();
+  const model = cfg.model || (await fetchFirstModel(cfg));
+  const res = await fetch(cfg.base + '/chat/completions', {
+    method: 'POST',
+    headers: authHeaders(cfg),
+    body: JSON.stringify({ model, messages, temperature: 0.2 }),
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}: ${(await res.text()).slice(0, 400)}`);
+  const data = await res.json();
+  const text = data && data.choices && data.choices[0] &&
+               data.choices[0].message && data.choices[0].message.content;
+  return text || '(empty response)';
+}
+
+async function callAIStream(messages, onChunk) {
+  const cfg = getApiConfig();
+  const model = cfg.model || (await fetchFirstModel(cfg));
+  const res = await fetch(cfg.base + '/chat/completions', {
+    method: 'POST',
+    headers: authHeaders(cfg),
+    body: JSON.stringify({ model, messages, temperature: 0.2, stream: true }),
+  });
+  if (!res.ok) throw new Error(`API error ${res.status}: ${(await res.text()).slice(0, 400)}`);
+  if (!res.body || !res.body.getReader) throw new Error('Response body is not streamable.');
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || !line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+      if (payload === '[DONE]') continue;
+      let json;
+      try { json = JSON.parse(payload); } catch (e) { continue; }
+      const delta = json && json.choices && json.choices[0] && json.choices[0].delta;
+      const content = delta && (delta.content || '');
+      if (content) {
+        full += content;
+        try { onChunk(content, full); } catch (e) {}
+      }
+    }
+  }
+
+  return full;
+}
+
+function renderMarkdownLite(md) {
+  const inline = (s) => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code>$1</code>');
+
+  let out = '';
+  let inList = false;
+  for (const rawLine of String(md).split(/\r?\n/)) {
+    const t = rawLine.trim();
+    if (/^[-*•]\s+/.test(t)) {
+      if (!inList) { out += '<ul>'; inList = true; }
+      out += `<li>${inline(t.replace(/^[-*•]\s+/, ''))}</li>`;
+      continue;
+    }
+    if (inList) { out += '</ul>'; inList = false; }
+    if (!t) continue;
+    if (/^#{1,6}\s+/.test(t)) { out += `<h4>${inline(t.replace(/^#{1,6}\s+/, ''))}</h4>`; continue; }
+    out += `<p>${inline(t)}</p>`;
+  }
+  if (inList) out += '</ul>';
+  return out;
+}
+
+/* ============================================================
+   6. MENUS / UI WIRING
+   ============================================================ */
+
+function closeMenus() { $$('.menu').forEach((m) => m.classList.remove('open')); }
+
+$$('.menu-btn').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = btn.parentElement;
+    const wasOpen = menu.classList.contains('open');
+    closeMenus();
+    if (!wasOpen) menu.classList.add('open');
+  });
+});
+document.addEventListener('click', closeMenus);
+$$('.menu-panel').forEach((p) => p.addEventListener('click', (e) => e.stopPropagation()));
+
+$$('.tabs button').forEach((b) => {
+  b.addEventListener('click', () => {
+    $$('.tabs button').forEach((x) => x.classList.toggle('active', x === b));
+    $('#tab-poll').hidden = b.dataset.tab !== 'poll';
+    $('#tab-written').hidden = b.dataset.tab !== 'written';
+  });
+});
+
+$('#md-file').addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  handleFile(file);
+  e.target.value = '';
+});
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => { importMarkdown(String(reader.result), file.name); };
+  reader.readAsText(file);
+}
+
+const dz = $('#md-dropzone');
+['dragenter', 'dragover'].forEach((evt) => {
+  dz.addEventListener(evt, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dz.classList.add('dragover');
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  });
+});
+['dragleave', 'dragend'].forEach((evt) => {
+  dz.addEventListener(evt, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dz.contains(e.relatedTarget)) dz.classList.remove('dragover');
+  });
+});
+dz.addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dz.classList.remove('dragover');
+  const dt = e.dataTransfer;
+  if (!dt) return;
+  const file = dt.files && dt.files[0];
+  if (file) { handleFile(file); return; }
+  const text = dt.getData && (dt.getData('text/plain') || dt.getData('text/uri-list'));
+  if (text) importMarkdown(text, 'dropped text');
+});
+['dragover', 'drop'].forEach((evt) => {
+  window.addEventListener(evt, (e) => {
+    if (!dz.contains(e.target)) { e.preventDefault(); }
+  });
+});
+
+$('#btn-open-paste').addEventListener('click', () => {
+  closeMenus();
+  $('#paste-modal').hidden = false;
+  $('#paste-area').focus();
+});
+$('#btn-paste-cancel').addEventListener('click', () => { $('#paste-modal').hidden = true; });
+$('#btn-paste-import').addEventListener('click', () => {
+  const md = $('#paste-area').value;
+  if (importMarkdown(md, 'pasted text')) $('#paste-modal').hidden = true;
+});
+
+$('#btn-clear').addEventListener('click', () => {
+  state.subjects = [];
+  state.poll = { items: [], answered: 0, correct: 0 };
+  state.written = [];
+  localStorage.removeItem('examai.questions');
+  renderTopicList(); renderPoll(); renderWritten(); refreshImportStatus();
+  $('#written-status').textContent = '';
+});
+
+$('#btn-load-sample').addEventListener('click', () => {
+  closeMenus();
+  importMarkdown(SAMPLE_MD, 'built-in sample');
+});
+
+$('#btn-copy-prompt').addEventListener('click', async () => {
+  closeMenus();
+  const ok = await copyToClipboard(PROMPT_GUIDE);
+  setImportStatus(ok ? '📋 Prompt guide copied to clipboard.' : '⚠️ Clipboard unavailable.', ok ? 'ok' : 'bad');
+});
+
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (e) { /* fall through */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) { return false; }
+}
+
+function loadApiIntoForm() {
+  $('#api-base').value = localStorage.getItem('examai.base') ?? DEFAULT_BASE;
+  $('#api-key').value = localStorage.getItem('examai.key') ?? '';
+  $('#api-model').value = localStorage.getItem('examai.model') ?? '';
+}
+$('#btn-api-save').addEventListener('click', () => {
+  localStorage.setItem('examai.base', $('#api-base').value.trim() || DEFAULT_BASE);
+  localStorage.setItem('examai.key', $('#api-key').value);
+  localStorage.setItem('examai.model', $('#api-model').value.trim());
+  $('#api-status').innerHTML = '<span class="ok">Saved ✓</span>';
+});
+$('#btn-api-test').addEventListener('click', async () => {
+  localStorage.setItem('examai.base', $('#api-base').value.trim() || DEFAULT_BASE);
+  localStorage.setItem('examai.key', $('#api-key').value);
+  localStorage.setItem('examai.model', $('#api-model').value.trim());
+  const el = $('#api-status');
+  el.textContent = 'Testing…';
+  try {
+    const cfg = getApiConfig();
+    const res = await fetch(cfg.base + '/models', { headers: cfg.key ? { Authorization: 'Bearer ' + cfg.key } : {} });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const ids = (data.data || []).map((m) => m.id);
+    el.innerHTML = `<span class="ok">OK</span> — ${ids.length} model(s): ${esc(ids.slice(0, 3).join(', '))}`;
+  } catch (e) {
+    el.innerHTML = `<span class="bad">Failed: ${esc(e.message)}</span>`;
+  }
+});
+
+$('#btn-poll-start').addEventListener('click', startPoll);
+$('#btn-poll-reset').addEventListener('click', resetPoll);
+$('#btn-gen').addEventListener('click', generateWritten);
+
+/* ============================================================
+   7. PROMPT GUIDE + DEFAULT SAMPLE BANK
+   ============================================================ */
+
+const PROMPT_GUIDE = [
+'You are helping me build a question bank for the ExamAI study app.',
+'',
+'The app has TWO sections per subject, and the two lists are INDEPENDENT:',
+'',
+'- "### Poll"    — a multiple-choice question bank used to drill the subject.',
+'- "### Written" — the raw exam topic list (verbatim) plus a baseline',
+'                  reference answer for each, used by the AI grader as a',
+'                  yardstick to compare the student\'s answer against.',
+'',
+'THE TWO LISTS DO NOT HAVE TO BE THE SAME LENGTH. In fact they usually',
+'shouldn\'t be:',
+'',
+'• The "### Poll" list should have AS MANY QUESTIONS AS NEEDED to cover',
+'  every detail of every topic. A single topic that bundles several',
+'  sub-points naturally produces SEVERAL poll questions (e.g. a topic like',
+'  "Понятие, предмет, функции и методология теории государства и права"',
+'  usually yields one question about понятие, one about предмет, one about',
+'  функции, and one about методология — four questions for one topic).',
+'  Err on the side of MORE questions: the goal is to fully encompass the',
+'  topic, so that drilling the poll covers everything the student needs',
+'  to know.',
+'',
+'• The "### Written" list is simply the raw topic list — one line per topic,',
+'  copied verbatim, each followed by its baseline answer.',
+'',
+'So: do NOT write one poll question per written topic. Instead, write as',
+'many poll questions as the topic content demands, and keep the written',
+'list as the source-of-truth topic list.',
+'',
+'Convert the raw exam topic list at the bottom into ONE Markdown document',
+'that ExamAI can import directly.',
+'',
+'=== OUTPUT FORMAT (strict) ===',
+'',
+'1) Every subject starts with a level-2 heading:',
+'',
+'   ## Subject name',
+'',
+'2) Immediately under it, add TWO level-3 subsections in this exact order:',
+'',
+'   ### Poll',
+'   ### Written',
+'',
+'3) Under "### Poll", write multiple-choice questions inspired by the topics',
+'   of this subject. Each poll question:',
+'   - is numbered 1., 2., 3. ... (continuing across the whole subject)',
+'   - has EXACTLY FOUR answer options',
+'   - marks the ONE correct option with a leading asterisk (*)',
+'   - follows EVERY option with a {comment} in curly braces explaining why',
+'     that specific option is right or wrong (see the section below)',
+'   - may optionally end the whole line with // and one overall sentence',
+'     summarising the key takeaway',
+'   - stays in the same language as the source list',
+'   - covers a specific sub-point or detail (it is fine, and expected,',
+'     to have several questions per topic)',
+'',
+'=== POLL OPTIONS — HOW TO WRITE THE {comment} BLOCKS ===',
+'',
+'Every option must be followed by a {comment} explaining WHY it is right',
+'or wrong. This is the most important part of a poll question.',
+'',
+'Rules for the {comment}:',
+'- Explain the reasoning, not just restate the answer.',
+'- For the CORRECT option: say what makes it correct, name the key term,',
+'  rule or article it corresponds to, and (where useful) contrast it with',
+'  the most common confusion.',
+'- For each WRONG option: name the specific misconception, or say which',
+'  concept the option actually belongs to. Do NOT just say "this is wrong"',
+'  or "this is not correct".',
+'- Aim for 1–3 informative sentences. Fuller and clearer is better.',
+'- Never use curly braces inside the option text itself — braces are',
+'  reserved for the comment that follows.',
+'',
+'Example (inline layout, one question, four options):',
+'',
+'1. Что такое функция государства? - Вид налога {Налог — это обязательный платёж в бюджет, то есть экономический инструмент, а не направление деятельности государства; здесь смешаны разные категории.} - *Основное направление деятельности государства {Функции государства — это именно основные направления его деятельности, выражающие сущность и социальное назначение государства (внутренние и внешние).} - Форма правления {Форма правления — это элемент формы государства (монархия, республика) наряду с формой государственного устройства и политическим режимом, а не направление деятельности.} - Орган государства {Орган государства — это структурная единица механизма государства (парламент, правительство, суд), а не функция.} // Функции государства выражают его сущность и социальное назначение.',
+'',
+'4) Under "### Written", copy the ORIGINAL topic lines of this subject',
+'   VERBATIM, one per line, numbered 1., 2., 3. ... Do NOT rewrite,',
+'   shorten or rephrase them.',
+'',
+'5) IMMEDIATELY AFTER each written topic line, add a BASELINE ANSWER using',
+'   a blockquote. Every line of the baseline must start with ">" (a greater-',
+'   than sign, then a space). Use ">" alone on a line for a blank line',
+'   inside the baseline. The baseline:',
+'   - is a concise, self-contained reference answer (typically 3–10 short',
+'     paragraphs, or a bulleted list where that fits better),',
+'   - is essentially a BOOK SUMMARY of the topic — it covers the key points,',
+'     terms, articles of law and structure that a strong student answer',
+'     could touch on. The student is NOT required to reproduce it 1:1 — the',
+'     grader will use it as a map of what a good answer might contain, not',
+'     as a checklist to demand verbatim.',
+'   - stays in the same language as the topic line,',
+'   - is your best expert answer, accurate and exam-oriented.',
+'',
+'=== RULES ===',
+'- Two subsections per subject: "### Poll" then "### Written".',
+'- The two lists are INDEPENDENT — do NOT force one poll question per topic.',
+'- Generate as many poll questions as needed to cover every detail of every',
+'  topic. Several questions per topic is normal and expected.',
+'- Exactly 4 options per poll question. No more, no less.',
+'- Exactly one asterisk per poll question.',
+'- EVERY option must be followed by a {comment} explaining why it is right',
+'  or wrong, with real reasoning (not just restating the answer).',
+'- Do NOT use curly braces anywhere else — they mark the per-option comment.',
+'- The "### Written" topic lines must be copied verbatim from the source.',
+'- Every written topic must be followed by at least one "> " baseline line;',
+'  use as many ">" lines as needed to cover the answer fully.',
+'- The baseline is a book summary; the student is not expected to match it 1:1.',
+'- No other headings, tables, code fences or commentary.',
+'- Output ONLY the Markdown document, nothing before or after it.',
+'',
+'=== SOURCE LIST ===',
+'<paste the raw list of exam questions/topics here>',
+].join('\n');
+
+/* Default bank: independent poll / written lists, per-option comments everywhere. */
+const SAMPLE_MD = [
+'## Теория государства и права',
+'',
+'### Poll',
+'1. Что изучает теория государства и права? - Отрасль экономики {Экономика изучает производство и распределение благ, а не правовые и государственные закономерности; это другая наука.} - *Общие закономерности возникновения, развития и функционирования государства и права {Именно это и есть предмет ТГП: она формулирует общие закономерности, а не описывает конкретные правовые институты.} - Строение государственных органов {Строение аппарата государства — предмет других дисциплин (например, административного права), а не общая закономерность.} - Правила юридической техники {Юридическая техника — прикладной инструмент правотворчества, а не предмет ТГП в целом.} // ТГП — юридическая наука об общих закономерностях возникновения, развития и функционирования государства и права.',
+'2. Какая функция теории государства и права носит прогностический характер? - Онтологическая {Онтологическая функция отвечает на вопрос «что есть государство и право», то есть описывает их сущее, а не предсказывает будущее.} - *Прогностическая {Прогностическая функция формулирует научные прогнозы о будущем развитии государства и права на основе выявленных закономерностей.} - Воспитательная {Воспитательная функция формирует правосознание и уважение к праву, но не занимается прогнозами.} - Идеологическая {Идеологическая функция разрабатывает и обосновывает определённые политико-правовые идеи, а не прогнозы.} // Прогностическая функция ТГП отвечает за научные прогнозы о развитии государственно-правовых явлений.',
+'3. Какой из перечисленных методов ТГП относится к частнонаучным? - Диалектический метод {Диалектика — всеобщий философский метод, а не частнонаучный.} - *Формально-юридический метод {Формально-юридический метод — типичный частнонаучный метод юриспруденции: он изучает нормы права в их чистом виде, их структуру и соотношение.} - Анализ {Анализ — общенаучный метод, применимый в любой науке, а не только в юриспруденции.} - Синтез {Синтез — общенаучный метод наряду с анализом, обобщением, индукцией и дедукцией.} // Формально-юридический, сравнительно-правовой, историко-правовой — частнонаучные методы ТГП; диалектика, анализ и синтез относятся к всеобщим и общенаучным.',
+'4. Что из перечисленного НЕ является признаком государства? - Публичная власть {Публичная власть — один из базовых признаков государства: она отделена от общества и осуществляется особым аппаратом.} - Суверенитет {Суверенитет — верховенство и независимость государственной власти как внутри страны, так и на международной арене; это признак государства.} - *Общественное мнение {Общественное мнение — признак гражданского общества, а не государства; оно не закреплено как официальный атрибут государства.} - Территориальная организация населения {Территориальная организация населения — признак государства: власть распространяется на определённую территорию с чётко очерченными границами.} // Общественное мнение формируется в гражданском обществе, а не является признаком государства.',
+'5. Какой подход к типологии государства делит их по общественно-экономическим формациям? - Цивилизационный {Цивилизационный подход делит государства по типу цивилизации (культурным, религиозным, географическим признакам), а не по формациям.} - *Формационный {Формационный подход (К. Маркс, Ф. Энгельс) делит государства по общественно-экономическим формациям: рабовладельческое, феодальное, капиталистическое, социалистическое.} - Географический {Географический подход группирует страны по расположению или размеру, но не является научной типологией государства.} - Религиозный {Религиозный критерий относится к цивилизационному подходу, а не образует отдельный формационный тип.} // Формационный подход опирается на способ производства и выделяет общественно-экономические формации.',
+'',
+'### Written',
+'1. Понятие, предмет, функции и методология теории государства и права.',
+'> Теория государства и права — юридическая наука, изучающая общие закономерности возникновения, развития и функционирования государства и права.',
+'> Предмет ТГП — общие закономерности возникновения, развития и функционирования государства и права, а также связанные с ними общественные отношения.',
+'> Функции ТГП: онтологическая, гносеологическая, эвристическая, прогностическая, методологическая, идеологическая, воспитательная.',
+'> Методология ТГП — система методов познания: всеобщие (диалектика), общенаучные (анализ, синтез, системный подход), частнонаучные (формально-юридический, сравнительно-правовой, историко-правовой).',
+'2. Понятие, признаки и сущность государства.',
+'> Государство — политическая организация общества, обладающая суверенитетом, публичной властью, специальным аппаратом управления и принуждения, территориальной организацией населения.',
+'> Признаки: публичная власть, суверенитет, территория, аппарат управления, налоги и сборы, правотворчество, монополия на легальное принуждение.',
+'> Сущность государства — в его социальном назначении: общесоциальная (выражение интересов всего общества) и классовая (выражение интересов господствующего класса).',
+'3. Типология государства: формационный и цивилизационный подходы.',
+'> Типология государства — классификация государств по определённым критериям.',
+'> Формационный подход (К. Маркс, Ф. Энгельс): по общественно-экономической формации выделяют рабовладельческое, феодальное, капиталистическое, социалистическое государства, а также переходные типы.',
+'> Цивилизационный подход (А. Тойнби, О. Шпенглер): по типу цивилизации выделяют государства древних цивилизаций, средневековые, современные; учитывает культурные, религиозные, географические факторы.',
+'> Плюсы и минусы: формационный — акцент на экономике, но упрощает историю; цивилизационный — многомерный, но критерии размыты.',
+'',
+'## Гражданское право',
+'',
+'### Poll',
+'1. Что является предметом гражданского права? - Административные отношения {Административные отношения построены на власти и подчинении и регулируются административным правом, а не гражданским.} - *Имущественные и личные неимущественные отношения {Именно эти отношения составляют предмет гражданского права (ст. 2 ГК РФ): они основаны на равенстве, автономии воли и имущественной самостоятельности участников.} - Уголовно-правовые отношения {Уголовно-правовые отношения возникают в связи с преступлением и наказанием и регулируются УК РФ.} - Бюджетные отношения {Бюджетные отношения — часть финансового права, они носят публичный характер и не входят в предмет ГП.} // Предмет гражданского права — имущественные и связанные с ними личные неимущественные отношения.',
+'2. Какой метод регулирования характерен для гражданского права? - Императивный {Императивный метод (власть-подчинение) характерен для административного и уголовного права, а не для гражданского.} - *Диспозитивный {Диспозитивный метод предполагает равенство сторон, автономию воли и имущественную самостоятельность — это базовый метод гражданского права.} - Карательный {Карательный метод — признак уголовного и административного права, где государство наказывает за нарушения.} - Разрешительный {Разрешительный порядок — элемент публично-правового регулирования, а не метод гражданского права.} // Для гражданского права характерен диспозитивный метод (равенство, автономия воли, имущественная самостоятельность).',
+'3. Что НЕ входит в структуру гражданского правоотношения? - Субъекты {Субъекты (физические и юридические лица, публичные образования) — обязательный элемент структуры гражданского правоотношения.} - Объект {Объект (вещи, действия, результаты работ и услуг, нематериальные блага) — обязательный элемент структуры.} - *Налоговая декларация {Налоговая декларация — документ налогового учёта, он не является элементом структуры гражданского правоотношения.} - Содержание {Содержание — это субъективные права и юридические обязанности участников; обязательный элемент структуры.} // Структура гражданского правоотношения — субъекты, объект и содержание.',
+'4. С какого возраста по общему правилу наступает полная гражданская дееспособность? - 14 лет {С 14 лет наступает частичная дееспособность: несовершеннолетние могут совершать мелкие бытовые сделки и распоряжаться своим заработком.} - 16 лет {16 лет — возраст для некоторых специальных прав (например, эмансипация возможна с 16 лет), но не общий возраст полной дееспособности.} - *18 лет {По общему правилу полная гражданская дееспособность наступает с 18 лет (ст. 21 ГК РФ); исключения — эмансипация и вступление в брак.} - 21 год {21 год — возраст для отдельных прав (например, быть членом некоторых органов), но не общее правило для полной дееспособности.} // По общему правилу полная дееспособность наступает с 18 лет.',
+'',
+'### Written',
+'1. Понятие гражданского права как отрасли права. Предмет, метод, принципы, источники гражданского права.',
+'> Понятие: совокупность правовых норм, регулирующих имущественные и связанные с ними неимущественные отношения.',
+'> Предмет: имущественные и личные неимущественные отношения.',
+'> Метод: диспозитивный (равенство сторон, автономия воли).',
+'> Принципы: равенство, неприкосновенность собственности, свобода договора, добросовестность, защита прав.',
+'> Источники: ГК РФ, ФЗ («О защите прав потребителей», «О государственной регистрации юридических лиц», «Об акционерных обществах» и др.), подзаконные акты, обычаи, судебная практика.',
+'2. Гражданское правоотношение: понятие, состав, классификация. Основания возникновения гражданских правоотношений. Защита гражданских прав.',
+'> Понятие: общественное отношение, урегулированное гражданским правом, с субъективными правами и обязанностями.',
+'> Состав: субъекты (физические и юридические лица), объект (имущество, действия, результаты), содержание (права и обязанности).',
+'> Классификация: абсолютные и относительные; имущественные и неимущественные; срочные и бессрочные.',
+'> Основания возникновения: сделки, акты органов, события (наследство, вред), судебные решения.',
+'> Защита прав: самозащита, судебная (иск, признание, восстановление), меры (возмещение, неустойка).',
+'3. Физическое лицо как субъект гражданского права: правоспособность, дееспособность, предпринимательская деятельность граждан.',
+'> Правоспособность: с рождения (ст. 17 ГК РФ).',
+'> Дееспособность: полная — с 18 лет; частичная — 14–18 лет (мелкие сделки); малолетние (до 14) — через представителей.',
+'> Предпринимательская деятельность: с 18 лет самостоятельная, под контролем представителей с 14; регистрация ИП без образования юридического лица, несение риска убытков.',
+'',
+'## Гражданское процессуальное право',
+'',
+'### Poll',
+'1. Что является предметом гражданского процессуального права? - Уголовно-процессуальные отношения {Уголовно-процессуальные отношения возникают в рамках уголовного судопроизводства и регулируются УПК РФ.} - *Отношения, возникающие при рассмотрении гражданских дел судом {Именно эти процессуальные отношения между судом и участниками процесса составляют предмет ГПП.} - Трудовые споры {Трудовые споры — материальные отношения, регулируемые трудовым правом; в суде они лишь приобретают процессуальную форму.} - Налоговые проверки {Налоговые проверки регулируются налоговым правом и проводятся налоговыми органами, а не судом.} // Предмет ГПП — процессуальные отношения при отправлении правосудия по гражданским делам.',
+'2. Какой метод присущ гражданскому процессуальному праву? - Чисто императивный {Чисто императивный метод — характеристика административного права; в ГПП участникам предоставлена и свобода в пределах закона.} - Чисто диспозитивный {Чисто диспозитивный метод присущ гражданскому праву; в ГПП суд действует властно, а стороны лишь в пределах, установленных законом.} - *Диспозитивно-императивный {Метод ГПП сочетает властные предписания суду и диспозитивные возможности участников процесса — отсюда его название.} - Поощрительный {Поощрительный метод характерен для некоторых отраслей (например, трудового права), но не описывает ГПП.} // Метод ГПП — диспозитивно-императивный: суд действует властно, участники — в пределах процессуальной свободы.',
+'3. Какой принцип относится к принципам гражданского процессуального права? - Публичность {Публичность (открытость) — неотъемлемый принцип судопроизводства, но как термин он относится скорее к административному процессу; в ГПК речь идёт о гласности.} - *Состязательность {Состязательность закреплена в ст. 123 Конституции РФ и ст. 12 ГПК РФ: стороны равны и состязаются в представлении доказательств.} - Единство центра и регионов {Это принцип государственного устройства, а не гражданского процесса.} - Коллегиальность прокуратуры {Коллегиальность прокуратуры — принцип организации прокуратуры, а не гражданского судопроизводства.} // Состязательность — конституционный принцип гражданского судопроизводства.',
+'4. Какой акт является основным источником гражданского процессуального права? - Уголовный кодекс РФ {УК РФ регулирует уголовно-правовые отношения, а не гражданское судопроизводство.} - *Гражданский процессуальный кодекс РФ {Именно ГПК РФ — основной источник ГПП: он устанавливает порядок рассмотрения и разрешения гражданских дел.} - КоАП РФ {КоАП РФ регулирует административные правонарушения и порядок привлечения к административной ответственности.} - Налоговый кодекс РФ {НК РФ регулирует налоговые отношения, а не гражданский процесс.} // Основной источник ГПП — ГПК РФ; также Конституция РФ, федеральные законы, международные договоры.',
+'',
+'### Written',
+'1. Понятие, предмет, метод и система гражданского процессуального права.',
+'> Гражданское процессуальное право (ГПП) — отрасль права, которая регулирует порядок разрешения судами гражданских дел. Понятие ГПП заключается в том, что это совокупность норм, определяющих процессуальные отношения, возникающие в ходе гражданского судопроизводства между судом и иными участниками процесса.',
+'> Предмет ГПП — сами эти процессуальные отношения и порядок их регулирования.',
+'> Метод ГПП — диспозитивно-императивный, сочетающий правила, предписывающие суду действовать властно, и нормы, предоставляющие участникам процесса свободу в пределах закона.',
+'> Система ГПП — комплекс правовых норм, который устанавливает порядок рассмотрения и разрешения судами общей юрисдикции гражданских дел.',
+'2. Принципы гражданского процессуального права.',
+'> - Законность: все действия в процессе должны соответствовать закону, что гарантирует защиту прав граждан.',
+'> - Осуществление правосудия только судом (монополия судов на правосудие): только суд вправе рассматривать гражданские дела и выносить решения.',
+'> - Независимость судей: судьи при рассмотрении дел независимы от какого-либо внешнего влияния и подчиняются только закону.',
+'> - Гласность: судебные заседания являются открытыми, и их ход может освещаться в СМИ, за исключением случаев, предусмотренных законом.',
+'> - Состязательность: стороны процесса (истец, ответчик и т.д.) имеют равные права и обязанности, активно участвуют в процессе, представляя свои доказательства и аргументы.',
+'> - Равноправие сторон: все участники процесса равны перед судом и законом.',
+'3. Источники гражданского процессуального права.',
+'> - Конституция РФ (ст. 120 — независимость судей, ст. 118 — осуществление правосудия только судом).',
+'> - ГПК РФ и ГК РФ.',
+'> - Другие ФКЗ и ФЗ (ФКЗ «О судебной системе», «О прокуратуре», «О мировых судьях»).',
+'> - Подзаконные нормативные акты.',
+'> - Локальные акты.',
+'> - Международные соглашения.',
+'> - Судебная практика.',
+].join('\n');
+
+/* ============================================================
+   8. BOOT
+   ============================================================ */
+
+loadQuestions();
+loadApiIntoForm();
+renderTopicList();
+renderPoll();
+renderWritten();
+refreshImportStatus();
+
+window.ExamAI = {
+  parseMarkdown,
+  parseAnswerPart,
+  splitTopLevel,
+  state,
+  importMarkdown,
+  generateWritten,
+  handleFile,
+  PROMPT_GUIDE,
+  SAMPLE_MD,
+};
+</script>
+</body>
+</html>
