@@ -150,10 +150,12 @@ Open **⚙️ API** and fill in:
 
 Click **Save** to persist to `localStorage`, then **Test connection** to hit `/models` and confirm the endpoint responds.
 
-### Compatible servers
+### OpenAI compatible. 
 
+Default values for various launching methods:
+- **XLM Studio** (my project) — `http://localhost:1234/v1`, no key.
 - **LM Studio** — `http://localhost:1234/v1`, no key.
-- **Ollama** — `http://localhost:11434/v1`, no key. Requires an OpenAI-compatible model.
+- **Ollama** — `http://localhost:11434/v1`, no key.
 - **llama.cpp server** — `http://localhost:8080/v1`, no key.
 - **OpenAI** — `https://api.openai.com/v1`, key required, model like `gpt-4o-mini`.
 - **Any other OpenAI-compatible proxy** — set Base URL and key accordingly.
@@ -227,16 +229,6 @@ ExamAI.generateWritten();
 const cards = document.querySelectorAll('#written-questions .wq');
 console.assert(cards.length === 3);   // 1 topic × 3 subjects with default setting
 ```
-
-Suggested test cases to cover:
-
-- Parser: inline layout, multiline layout, comments with `//` inside, comments with ` - ` inside, braces inside question text (should still parse), missing correct answer (question skipped from pool).
-- Import: valid `.md`, empty `.md`, `.md` with only `### Written`, `.md` with only `### Poll`.
-- Section 1: pool selection respects subject checkboxes, `Questions` count clamps to pool size, correct/wrong answer styling, per-option comment rendering, reset clears both styling and score.
-- Section 2: `Topics per subject` clamps to available topics per subject, baseline block appears only when present, streaming renders incrementally, fallback triggers on non-streaming servers, error path shows the prompt that would have been sent.
-- Persistence: import → reload → bank still present in `localStorage`.
-- API: Save stores values, Test connection hits `/models`, blank Model falls back to first from `/models`.
-- Drop zone: `dragover` adds `.dragover` class, `drop` with a File routes through `handleFile`, `drop` with only `text/plain` still imports.
 
 ---
 
