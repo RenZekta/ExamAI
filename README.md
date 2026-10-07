@@ -1,5 +1,7 @@
 # ExamAI
 
+**English** | [Russian version](README.ru.md)
+
 A single-file, self-contained web app for exam preparation. It gives you two independent study modes plus a read-only Notebook, all backed by a Markdown question bank you build (or let an AI build for you):
 
 1. **Practice poll** — multiple-choice drilling with instant verdicts, per-option reasoning, and a running score.
@@ -7,6 +9,8 @@ A single-file, self-contained web app for exam preparation. It gives you two ind
 3. **Notebook** — the whole imported bank rendered as Markdown notes: every subject, every topic and its answer, in import order.
 
 No build step, no dependencies, no server. Open the `.html` file in a browser and go.
+
+The interface ships in English and Russian — switch it with the **🌐 Language** menu in the top bar (the choice is saved to `localStorage`), or read this documentation in [Russian](README.ru.md).
 
 ---
 
@@ -48,13 +52,15 @@ That's it. Your imported bank is saved to `localStorage`, so it survives a page 
 - The grading prompt instructs the model to be a **supportive tutor**, not an emotionless grading machine, and to treat the baseline as a *book summary*, not a checklist. Output structure:
 
   ```
-  ## Оценка            X/10 — one-sentence verdict
-  ## Что верно          Specific correct points
-  ## Что неверно        Gently explain misconceptions
-  ## Что можно добавить Optional extras (not mandatory)
-  ## Образцовый ответ   Model answer
-  ## Совет             One friendly tip
+  ## Grade                X/10 — one-sentence verdict
+  ## What's correct       Specific correct points
+  ## What's wrong or imprecise  Gently explain misconceptions
+  ## What could be added  Optional extras (not mandatory)
+  ## Model answer         Model answer
+  ## Tip                  One friendly tip
   ```
+
+  Headings are localized with the interface — the Russian UI asks for the same six sections in Russian.
 
 - Each card can be re-submitted independently with a new answer.
 
@@ -63,11 +69,10 @@ That's it. Your imported bank is saved to `localStorage`, so it survives a page 
 A read-only view of the imported bank, laid out like a Markdown document:
 
 ```
-# Гражданское право
+# Subject name
 
-## 1. Понятие гражданского права как отрасли права. Предмет, метод, принципы, источники гражданского права.
-Понятие: Совокупность правовых норм, регулирующих имущественные и связанные с ними неимущественные отношения
-Предмет: Имущественные и личные неимущественные отношения
+## 1. Verbatim exam topic line from your source list.
+The imported baseline answer, rendered as real Markdown.
 …
 ```
 
@@ -83,11 +88,13 @@ A read-only view of the imported bank, laid out like a Markdown document:
   - **Drag-and-drop zone** — drop a `.md` file anywhere onto the dashed area, or click to open a file picker.
   - **✏️ Paste / edit .md** — paste a bank directly, no file needed.
   - **📋 Copy prompt guide** — copies a full system prompt to your clipboard that an AI can follow to produce a compatible `.md` file from a raw exam topic list.
-  - **🧪 Load built-in sample** — loads the demo bank (three subjects, real exam topics from *Теория государства и права*, *Гражданское право*, *Гражданское процессуальное право*).
+  - **🧪 Load built-in sample** — loads a demo bank: three subjects with real exam topics and baseline answers (the built-in sample is written in Russian).
   - **🗑 Clear imported data** — wipes the bank and `localStorage`.
   - A live status line below the menu reports how many subjects/questions/topics/baselines were loaded and how many poll questions have per-option comments.
 
 - **⚙️ API** menu — Base URL, API key, and optional model name. See [API setup](#api-setup).
+
+- **🌐 Language** menu — switches the whole interface between **English** and **Russian**. The pick is stored in `localStorage` and applied immediately: labels, statuses, hints, placeholders, the prompt guide and the AI grading prompt. Your imported bank is data and is never translated.
 
 ---
 
@@ -95,22 +102,20 @@ A read-only view of the imported bank, laid out like a Markdown document:
 
 Each subject has **two independent lists** — `### Poll` (multiple-choice drill) and `### Written` (verbatim exam topics + baseline answers). Their lengths don't have to match; in fact they usually shouldn't.
 
-```
-## Теория государства и права
+```markdown
+## Subject name
 
 ### Poll
-1. Что изучает теория государства и права? - Отрасль экономики {Экономика изучает производство благ, а не правовые закономерности.} - *Общие закономерности возникновения, развития и функционирования государства и права {Именно это составляет предмет ТГП.} - Строение государственных органов {Это предмет других дисциплин.} - Правила юридической техники {Юридическая техника — инструмент правотворчества, а не предмет ТГП.} // ТГП — юридическая наука об общих закономерностях возникновения, развития и функционирования государства и права.
-2. Следующий вопрос? - ... - *... - ... - ... // ...
+1. What does this discipline study? - Wrong option {Why this option belongs to another field.} - *Correct option {Why this is exactly the right answer, naming the key term.} - Wrong option {Which concept this option actually describes.} - Wrong option {Why it is a tool, not the subject.} // One-sentence takeaway for the whole question.
+2. Next question? - ... - *... - ... - ... // ...
 
 ### Written
-1. Понятие, предмет, функции и методология теории государства и права.
-> Теория государства и права — юридическая наука, изучающая общие закономерности возникновения, развития и функционирования государства и права.
-> Предмет ТГП — общие закономерности...
-> Функции ТГП: онтологическая, гносеологическая, ...
-> Методология ТГП — система методов познания...
-2. Понятие, признаки и сущность государства.
-> Государство — политическая организация общества, обладающая суверенитетом...
-> Признаки: публичная власть, суверенитет, ...
+1. Verbatim exam topic line one.
+> Concise reference answer paragraph covering the key points,
+> terms and structure a strong answer should touch on.
+> Second paragraph of the baseline, if needed.
+2. Verbatim exam topic line two.
+> Its baseline answer, in the same language as the topic line.
 ```
 
 ### Rules
@@ -140,7 +145,7 @@ Each subject has **two independent lists** — `### Poll` (multiple-choice drill
 You don't have to write the `.md` by hand. Use the built-in prompt guide:
 
 1. Click **📥 Import questions + poll → 📋 Copy prompt guide**. The full prompt lands on your clipboard.
-2. Paste the raw exam topic list (like the ones in your `Теория государства и права.txt`) at the end of the prompt, under `=== SOURCE LIST ===`.
+2. Paste your raw exam topic list (any plain-text list of topics) at the end of the prompt, under `=== SOURCE LIST ===`.
 3. Feed the whole thing to any capable LLM (ChatGPT, Claude, Gemini, a local model — anything that can follow structured output instructions).
 4. Save the model's Markdown output as a `.md` file (or paste it directly into ExamAI via **✏️ Paste / edit .md**).
 
@@ -158,7 +163,7 @@ The prompt guide covers:
 
 ## API setup
 
-Section 2 talks to any OpenAI-compatible `/chat/completions` endpoint with streaming support. The default preset targets [LM Studio](https://lmstudio.ai/) running locally.
+Section 2 talks to any OpenAI-compatible `/chat/completions` endpoint with streaming support. The default preset targets XLM Studio/LM Studio running locally.
 
 Open **⚙️ API** and fill in:
 
@@ -184,111 +189,17 @@ The app sends `temperature: 0.2` and (for streaming) `stream: true`.
 
 ---
 
-## How streaming works
-
-`callAIStream()` sends the request with `stream: true`, reads `response.body.getReader()`, and parses SSE lines of the form:
-
-```
-data: {"choices":[{"delta":{"content":"..."}}]}
-data: [DONE]
-```
-
-Each chunk's `delta.content` is appended to an accumulator, and the feedback block is re-rendered on every token with a blinking `▍` cursor. If the server returns a non-streamable body or a non-2xx status, the app falls back to a single `callAI()` request and shows a spinner in the meantime.
-
----
-
 ## Testing
 
-The app exposes `window.ExamAI` for programmatic use and automated testing:
+Tests live in the [`tests/`](tests/) folder, so this README stays readable:
 
-```js
-window.ExamAI = {
-  parseMarkdown,     // (md: string) => subjects[]
-  parseAnswerPart,   // (raw: string) => { text, correct, comment }
-  splitTopLevel,     // (s: string, sep: string) => string[]
-  state,             // { subjects, poll, written }
-  importMarkdown,    // (md: string, label: string) => boolean
-  generateWritten,   // triggers Section 2 generation
-  renderNotebook,     // re-renders the Notebook tab
-  renderNotebookMd,   // (md: string, filter?: string) => html — the notebook's Markdown renderer
-  notebookData,       // (filter: string) => filtered bank snapshot, in import order
-  notebookMarkdown,   // (data) => "# Subject\n\n## 1. Topic\n<answer>" text
-  handleFile,        // (file: File) => void
-  PROMPT_GUIDE,      // string
-  SAMPLE_MD,         // string
-};
-```
+- [`tests/examai.test.js`](tests/examai.test.js) — the main suite (49 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, language switching, and answered poll state surviving a language switch.
+- [`tests/check-keys.js`](tests/check-keys.js) — static i18n check, run with `node tests/check-keys.js`: every key referenced in the app exists in both language tables, and the EN/RU tables declare exactly the same keys.
 
-A typical test script can:
-
-```js
-// 1. Load the built-in sample and assert counts.
-ExamAI.importMarkdown(ExamAI.SAMPLE_MD, 'test');
-console.assert(ExamAI.state.subjects.length === 3);
-console.assert(ExamAI.state.subjects.reduce((n, s) => n + s.questions.length, 0) === 13);
-console.assert(ExamAI.state.subjects.reduce((n, s) => n + s.topics.length, 0) === 9);
-
-// 2. Parse a custom snippet and check per-option comments.
-const subs = ExamAI.parseMarkdown(
-  '## T\n### Poll\n1. Q? - a {why a} - *b {why b} - c {why c} - d {why d} // итог\n'
-);
-console.assert(subs[0].questions[0].answers[1].correct === true);
-console.assert(subs[0].questions[0].answers[1].comment === 'why b');
-console.assert(subs[0].questions[0].answers[0].comment === 'why a');
-
-// 3. Check that braces containing " - " don't break parsing.
-const subs2 = ExamAI.parseMarkdown(
-  '## T\n### Poll\n1. Q? - a {см. 1 - 2 примера} - *b - c - d\n'
-);
-console.assert(subs2[0].questions[0].answers[0].comment === 'см. 1 - 2 примера');
-
-// 4. Check baseline attachment.
-const subs3 = ExamAI.parseMarkdown(
-  '## T\n### Written\n1. Topic one.\n> Baseline line 1\n> Baseline line 2\n'
-);
-console.assert(subs3[0].topics[0].baseline === 'Baseline line 1\nBaseline line 2');
-
-// 5. Trigger Section 2 generation and count cards.
-ExamAI.generateWritten();
-const cards = document.querySelectorAll('#written-questions .wq');
-console.assert(cards.length === 3);   // 1 topic × 3 subjects with default setting
-
-// 6. Notebook: answers render as Markdown, structure keeps import order.
-console.assert(ExamAI.renderNotebookMd('**bold**\n- one\n- two')
-  .includes('<p><strong>bold</strong></p><ul>'));
-console.assert(!ExamAI.renderNotebookMd('[x](javascript:alert(1))').includes('javascript:'));
-ExamAI.importMarkdown(ExamAI.SAMPLE_MD, 'test');
-const nb = ExamAI.notebookData('');
-console.assert(ExamAI.notebookMarkdown(nb).startsWith('# Теория государства и права\n\n## 1. '));
-console.assert(document.querySelectorAll('#notebook .nb-h1').length === 3);
-console.assert(document.querySelectorAll('#notebook .nb-h2').length === 9);
-```
-
----
-
-## Architecture
-
-Everything lives in one HTML file. Roughly:
-
-| Block | Purpose |
-|---|---|
-| CSS `:root` + rules | Dark theme, drop zone, poll cards, written cards, stream cursor, modal |
-| `parseMarkdown()` | Splits the `.md` into subjects → `{ questions, topics }` |
-| `splitTopLevel()` / `findTopLevelDoubleSlash()` / `parseAnswerPart()` | Brace-aware tokenizers for the poll-line grammar |
-| `state` + `save/loadQuestions()` | In-memory + `localStorage` persistence |
-| `importMarkdown()` | Parser → state → render pipeline |
-| `startPoll()` / `answerPoll()` / `buildPollFeedback()` | Section 1 |
-| `generateWritten()` / `submitWritten()` / `buildGradingMessages()` | Section 2 |
-| `notebookData()` / `renderNotebook()` / `notebookMarkdown()` | Section 3 — filtered snapshot, tab render, Markdown export |
-| `renderNotebookMd()` / `inlineMd()` / `parseMdList()` | Safe block+inline Markdown → HTML renderer used by the notebook |
-| `callAI()` / `callAIStream()` / `fetchFirstModel()` | OpenAI-compatible transport |
-| `renderMarkdownLite()` | Tiny, safe Markdown → HTML renderer for AI feedback |
-| Menus, drop zone, paste modal, API form | UI wiring |
-
-No frameworks, no bundlers, no network calls except to the LLM endpoint you configure.
+See [`tests/TESTS.md`](tests/TESTS.md) for how to run them (browser console or headless) and what each assertion covers. For your own scripts the app exposes a `window.ExamAI` test API — `parseMarkdown`, `importMarkdown`, `state`, `t`, `setLang`, `promptGuide`, `notebookData` and the rest, listed in [Agents.md](Agents.md).
 
 ---
 
 ## License
 
-MIT — do whatever you want with it.
+Apache 2.0
