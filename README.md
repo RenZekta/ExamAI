@@ -1,9 +1,10 @@
 # ExamAI
 
-A single-file, self-contained web app for exam preparation. It gives you two independent study modes backed by a Markdown question bank you build (or let an AI build for you):
+A single-file, self-contained web app for exam preparation. It gives you two independent study modes plus a read-only Notebook, all backed by a Markdown question bank you build (or let an AI build for you):
 
 1. **Practice poll** — multiple-choice drilling with instant verdicts, per-option reasoning, and a running score.
 2. **Written exam** — free-form answers graded by an LLM, with streaming feedback, a supportive tone, and an optional per-topic baseline answer to compare against.
+3. **Notebook** — the whole imported bank rendered as Markdown notes: every subject, every topic and its answer, in import order.
 
 No build step, no dependencies, no server. Open the `.html` file in a browser and go.
 
@@ -56,6 +57,25 @@ That's it. Your imported bank is saved to `localStorage`, so it survives a page 
   ```
 
 - Each card can be re-submitted independently with a new answer.
+
+### Section 3 · Notebook
+
+A read-only view of the imported bank, laid out like a Markdown document:
+
+```
+# Гражданское право
+
+## 1. Понятие гражданского права как отрасли права. Предмет, метод, принципы, источники гражданского права.
+Понятие: Совокупность правовых норм, регулирующих имущественные и связанные с ними неимущественные отношения
+Предмет: Имущественные и личные неимущественные отношения
+…
+```
+
+- **Import order is preserved exactly** — subjects as `#` headings, each subject's topics as `## N.` headings with their imported answer underneath. Nothing here is shuffled, sampled or scored.
+- **Answers are rendered as real Markdown**, not shown as plain text: `#`–`######` (ATX) and setext headings, ordered/unordered/nested lists, blockquotes, GFM tables, fenced code blocks, `---` rules, `**bold**`, `*italic*`, `~~strikethrough~~`, `` `code` ``, links and images. Links/images are restricted to `http(s)` and `mailto:` URLs, and all source text is HTML-escaped first, so a hostile `.md` cannot inject markup.
+- **Poll questions and their options are intentionally not shown** — this tab is pure study notes (topic → answer).
+- The **filter box** narrows subjects, topics and answers and highlights every match; if the subject itself matches, all of its topics stay visible.
+- **📋 Copy as Markdown** puts the current (filtered) view on the clipboard as `# … / ## N. …` Markdown — the same structure the tab renders.
 
 ### Top bar
 
@@ -189,6 +209,10 @@ window.ExamAI = {
   state,             // { subjects, poll, written }
   importMarkdown,    // (md: string, label: string) => boolean
   generateWritten,   // triggers Section 2 generation
+  renderNotebook,     // re-renders the Notebook tab
+  renderNotebookMd,   // (md: string, filter?: string) => html — the notebook's Markdown renderer
+  notebookData,       // (filter: string) => filtered bank snapshot, in import order
+  notebookMarkdown,   // (data) => "# Subject\n\n## 1. Topic\n<answer>" text
   handleFile,        // (file: File) => void
   PROMPT_GUIDE,      // string
   SAMPLE_MD,         // string
@@ -228,6 +252,16 @@ console.assert(subs3[0].topics[0].baseline === 'Baseline line 1\nBaseline line 2
 ExamAI.generateWritten();
 const cards = document.querySelectorAll('#written-questions .wq');
 console.assert(cards.length === 3);   // 1 topic × 3 subjects with default setting
+
+// 6. Notebook: answers render as Markdown, structure keeps import order.
+console.assert(ExamAI.renderNotebookMd('**bold**\n- one\n- two')
+  .includes('<p><strong>bold</strong></p><ul>'));
+console.assert(!ExamAI.renderNotebookMd('[x](javascript:alert(1))').includes('javascript:'));
+ExamAI.importMarkdown(ExamAI.SAMPLE_MD, 'test');
+const nb = ExamAI.notebookData('');
+console.assert(ExamAI.notebookMarkdown(nb).startsWith('# Теория государства и права\n\n## 1. '));
+console.assert(document.querySelectorAll('#notebook .nb-h1').length === 3);
+console.assert(document.querySelectorAll('#notebook .nb-h2').length === 9);
 ```
 
 ---
@@ -245,6 +279,8 @@ Everything lives in one HTML file. Roughly:
 | `importMarkdown()` | Parser → state → render pipeline |
 | `startPoll()` / `answerPoll()` / `buildPollFeedback()` | Section 1 |
 | `generateWritten()` / `submitWritten()` / `buildGradingMessages()` | Section 2 |
+| `notebookData()` / `renderNotebook()` / `notebookMarkdown()` | Section 3 — filtered snapshot, tab render, Markdown export |
+| `renderNotebookMd()` / `inlineMd()` / `parseMdList()` | Safe block+inline Markdown → HTML renderer used by the notebook |
 | `callAI()` / `callAIStream()` / `fetchFirstModel()` | OpenAI-compatible transport |
 | `renderMarkdownLite()` | Tiny, safe Markdown → HTML renderer for AI feedback |
 | Menus, drop zone, paste modal, API form | UI wiring |

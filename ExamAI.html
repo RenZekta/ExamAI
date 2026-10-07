@@ -139,6 +139,52 @@
   .ref-answer .ref-body{white-space:pre-wrap;color:var(--fg);font-size:14px;line-height:1.5}
   .ref-note{color:var(--muted);font-size:12px;margin-top:6px;font-style:italic}
 
+  /* ---------- notebook: markdown-style view of the imported bank ---------- */
+  .nb-subject{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+              padding:16px 18px;margin-bottom:18px}
+  .nb-h1{display:flex;align-items:baseline;gap:9px;font-size:20px;font-weight:700;
+         line-height:1.35;margin:0;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .nb-count{color:var(--muted);font-size:12px;margin-top:7px}
+  .nb-topics{display:block}
+  .nb-topic{padding:14px 0;border-bottom:1px dashed var(--line)}
+  .nb-topic:last-child{border-bottom:none;padding-bottom:0}
+  .nb-h2{display:flex;align-items:baseline;gap:7px;font-size:15.5px;font-weight:600;
+         line-height:1.45;margin-bottom:7px}
+  .nb-hash{color:var(--acc-2);font-weight:700}
+  .nb-num{color:var(--muted);font-weight:600}
+  .nb-body{color:var(--fg);font-size:14px;line-height:1.62;margin:0}
+  .nb-body>*:first-child{margin-top:0}
+  .nb-body>*:last-child{margin-bottom:0}
+  .nb-body p{margin:0 0 8px}
+  .nb-body h1{font-size:1.22em;margin:14px 0 6px}
+  .nb-body h2{font-size:1.14em;margin:13px 0 6px}
+  .nb-body h3{font-size:1.07em;margin:12px 0 5px}
+  .nb-body h4,.nb-body h5,.nb-body h6{font-size:1em;margin:10px 0 4px;color:#a9c3ff}
+  .nb-body ul,.nb-body ol{margin:6px 0 8px;padding-left:22px}
+  .nb-body li{margin:3px 0}
+  .nb-body li>ul,.nb-body li>ol{margin:3px 0}
+  .nb-body li>p{margin:0}
+  .nb-body blockquote{margin:8px 0;padding:2px 0 2px 12px;border-left:3px solid var(--acc-2);
+                      color:var(--muted)}
+  .nb-body blockquote p:last-child{margin-bottom:0}
+  .nb-body code{background:var(--panel-2);border:1px solid var(--line);border-radius:5px;
+                padding:1px 5px;font-size:.92em}
+  .nb-body pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+               padding:10px 12px;overflow:auto;margin:8px 0}
+  .nb-body pre code{background:none;border:none;padding:0;white-space:pre;font-size:13px}
+  .nb-body hr{border:none;border-top:1px solid var(--line);margin:12px 0}
+  .nb-body table{border-collapse:collapse;margin:8px 0;font-size:13.5px}
+  .nb-body th,.nb-body td{border:1px solid var(--line);padding:6px 9px;text-align:left;
+                          vertical-align:top}
+  .nb-body th{background:var(--panel-2);font-weight:600}
+  .nb-body img{max-width:100%;border-radius:6px}
+  .nb-body del{color:var(--muted)}
+  .nb-missing{color:var(--warn);font-size:12.5px;font-style:italic;margin:6px 0}
+  #notebook mark{background:rgba(240,169,59,.28);color:inherit;border-radius:3px;padding:0 2px}
+  #nb-filter{width:240px;padding:7px 9px;border-radius:8px;border:1px solid var(--line);
+             background:var(--bg)}
+  #nb-filter::-webkit-search-cancel-button{filter:invert(.7)}
+
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;
                   align-items:center;justify-content:center;z-index:100;padding:20px}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
@@ -202,6 +248,7 @@
 <nav class="tabs">
   <button type="button" data-tab="poll" class="active">1 · Practice poll</button>
   <button type="button" data-tab="written">2 · Written exam (AI)</button>
+  <button type="button" data-tab="notebook">3 · Notebook</button>
 </nav>
 
 <main>
@@ -237,6 +284,18 @@
       <div class="hint" id="written-status"></div>
     </div>
     <div id="written-questions"></div>
+  </section>
+
+  <section id="tab-notebook" hidden>
+    <div class="panel">
+      <div class="row">
+        <strong>Notebook</strong>
+        <input id="nb-filter" type="search" placeholder="Filter subjects, topics, answers…" />
+        <button class="btn" id="btn-nb-copy" type="button">📋 Copy as Markdown</button>
+      </div>
+      <div class="hint" id="nb-status" style="margin-top:6px"></div>
+    </div>
+    <div id="notebook"></div>
   </section>
 </main>
 
@@ -511,6 +570,7 @@ function importMarkdown(md, sourceLabel) {
   renderTopicList();
   renderPoll();
   renderWritten();
+  renderNotebook();
   refreshImportStatus();
   setImportStatus(`✅ Imported ${totalQ} poll question(s) and ${totalT} written topic(s) from ${sourceLabel}.`);
   return true;
@@ -971,7 +1031,424 @@ function renderMarkdownLite(md) {
 }
 
 /* ============================================================
-   6. MENUS / UI WIRING
+   6. SECTION 3 — NOTEBOOK
+   Read-only, markdown-rendered view of the imported bank:
+     # Subject
+     ## N. Topic
+       imported answer, rendered as real Markdown
+   Subjects and topics keep their exact import order. Poll
+   questions and their options are deliberately NOT shown here.
+   ============================================================ */
+
+function currentNotebookFilter() {
+  return ($('#nb-filter').value || '').trim().toLowerCase();
+}
+
+/* Filtered snapshot of the bank, in import order.
+   A topic is kept when the subject, the topic text or its answer
+   matches; if the subject itself matches, all of its topics stay. */
+function notebookData(needle) {
+  const out = [];
+  state.subjects.forEach((s) => {
+    const subjectHit = !!needle && s.name.toLowerCase().includes(needle);
+    const topics = [];
+    (s.topics || []).forEach((t, ti) => {
+      const answer = (t.baseline || '').trim();
+      const hit = subjectHit || !needle ||
+        t.text.toLowerCase().includes(needle) ||
+        answer.toLowerCase().includes(needle);
+      if (!hit) return;
+      topics.push({ n: ti + 1, text: t.text, answer, subjectHit });
+    });
+    if (topics.length) out.push({ name: s.name, subjectHit, topics });
+  });
+  return out;
+}
+
+/* ============================================================
+   6.1 MARKDOWN RENDERER (used by the notebook)
+   Safe by construction: every piece of source text is escaped
+   before it reaches the DOM; URLs are scheme-whitelisted.
+   ============================================================ */
+
+/* Escape `text` and wrap a filter hit in <mark>. */
+function escAndMark(text, needle) {
+  if (!needle) return esc(text);
+  const idx = text.toLowerCase().indexOf(needle);
+  if (idx === -1) return esc(text);
+  return esc(text.slice(0, idx)) + '<mark>' +
+         esc(text.slice(idx, idx + needle.length)) + '</mark>' +
+         esc(text.slice(idx + needle.length));
+}
+
+/* Only http(s)/mailto and scheme-less (relative / #anchor) URLs survive. */
+function safeUrl(raw) {
+  const u = String(raw).trim();
+  if (!u) return '';
+  if (/^[a-z][a-z0-9+.-]*:/i.test(u)) return /^(https?|mailto):/i.test(u) ? u : '';
+  return u;
+}
+
+/* Parse `[text](target)` starting at the `[`. Handles nested brackets,
+   balanced parentheses in the target and optional "titles".
+   Returns { text, url, end } or null when it is not a link/image. */
+function matchMdLink(s, start) {
+  let depth = 0, j = start;
+  for (; j < s.length; j++) {
+    const c = s[j];
+    if (c === '\\' && j + 1 < s.length) { j++; continue; }
+    if (c === '[') depth++;
+    else if (c === ']') { depth--; if (depth === 0) break; }
+  }
+  if (depth !== 0 || s[j] !== ']' || s[j + 1] !== '(') return null;
+  const text = s.slice(start + 1, j);
+
+  let parens = 0, k = j + 1;
+  for (; k < s.length; k++) {
+    const c = s[k];
+    if (c === '\\' && k + 1 < s.length) { k++; continue; }
+    if (c === '(') parens++;
+    else if (c === ')') { parens--; if (parens === 0) break; }
+  }
+  if (parens !== 0 || s[k] !== ')') return null;
+  const target = s.slice(j + 2, k).split(/\s+/)[0];
+  return { text, url: safeUrl(target), end: k + 1 };
+}
+
+/* Inline markdown: code spans, images, links, **bold**, *em*, ~~del~~. */
+function inlineMd(src, needle) {
+  const s = String(src);
+  let out = '', plain = '', i = 0;
+  const flush = () => { if (plain) { out += escAndMark(plain, needle); plain = ''; } };
+
+  while (i < s.length) {
+    const ch = s[i];
+
+    if (ch === '\\' && i + 1 < s.length) { plain += s[i + 1]; i += 2; continue; }
+
+    if (ch === '`') {                                   // code span
+      let n = 0; while (s[i + n] === '`') n++;
+      const fence = '`'.repeat(n);
+      const end = s.indexOf(fence, i + n);
+      if (end !== -1) {
+        flush();
+        out += '<code>' + escAndMark(s.slice(i + n, end), needle) + '</code>';
+        i = end + n; continue;
+      }
+      plain += fence; i += n; continue;
+    }
+
+    if (ch === '!' && s[i + 1] === '[') {               // image
+      const m = matchMdLink(s, i + 1);
+      if (m) {
+        flush();
+        out += m.url
+          ? `<img src="${esc(m.url)}" alt="${esc(m.text)}">`
+          : esc(m.text);
+        i = m.end; continue;
+      }
+    }
+
+    if (ch === '[') {                                   // link
+      const m = matchMdLink(s, i);
+      if (m && m.text) {
+        flush();
+        out += m.url
+          ? `<a href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">` +
+            inlineMd(m.text, needle) + '</a>'
+          : inlineMd(m.text, needle);
+        i = m.end; continue;
+      }
+    }
+
+    if (ch === '*' || ch === '_') {                     // emphasis
+      const double = s[i + 1] === ch;
+      const delim = double ? ch + ch : ch;
+      // intra-word _foo_ is not emphasis (snake_case etc.)
+      if (!double && ch === '_' && /[a-z0-9]/i.test(s[i - 1] || '')) { plain += ch; i++; continue; }
+      const end = s.indexOf(delim, i + delim.length);
+      if (end !== -1 && end > i + delim.length) {
+        const inner = s.slice(i + delim.length, end);
+        if (inner.trim() && (double || inner.indexOf('\n') === -1)) {
+          flush();
+          out += double
+            ? `<strong>${inlineMd(inner, needle)}</strong>`
+            : `<em>${inlineMd(inner, needle)}</em>`;
+          i = end + delim.length; continue;
+        }
+      }
+      plain += delim; i += delim.length; continue;
+    }
+
+    if (ch === '~' && s[i + 1] === '~') {               // ~~strikethrough~~
+      const end = s.indexOf('~~', i + 2);
+      if (end !== -1 && end > i + 2) {
+        flush();
+        out += `<del>${inlineMd(s.slice(i + 2, end), needle)}</del>`;
+        i = end + 2; continue;
+      }
+    }
+
+    plain += ch; i++;
+  }
+  flush();
+  return out;
+}
+
+function indentWidth(line) {
+  let n = 0;
+  for (const c of line) {
+    if (c === ' ') n++;
+    else if (c === '\t') n += 4;
+    else break;
+  }
+  return n;
+}
+
+function dedentLine(line, cols) {
+  let n = 0, i = 0;
+  while (i < line.length && n < cols) {
+    if (line[i] === ' ') n++;
+    else if (line[i] === '\t') n += 4;
+    else break;
+    i++;
+  }
+  return line.slice(i);
+}
+
+function isMdBlockStart(line) {
+  const t = line.trim();
+  if (!t) return true;
+  if (/^(#{1,6})(\s|$)/.test(t)) return true;
+  if (/^\s*>/.test(line)) return true;
+  if (/^(`{3,}|~{3,})/.test(t)) return true;
+  if (/^([-*+]|\d{1,9}[.)])\s+/.test(t)) return true;
+  if (/^(-{3,}|\*{3,}|_{3,})$/.test(t) || /^([-*_])(?:\s*\1){2,}$/.test(t)) return true;
+  if (/^\s*\|/.test(line)) return true;
+  return false;
+}
+
+/* One list (nested items render recursively). Returns html + next line index. */
+function parseMdList(lines, start, baseIndent, needle) {
+  const first = lines[start].trim();
+  const ordered = /^\d{1,9}[.)]\s/.test(first);
+  const itemRe = ordered ? /^\d{1,9}[.)]\s+/ : /^[-*+]\s+/;
+  const anyItemRe = /^([-*+]|\d{1,9}[.)])\s+/;
+  const items = [];
+  let i = start;
+
+  while (i < lines.length) {
+    const raw = lines[i];
+
+    if (!raw.trim()) {                                  // blank line inside a list
+      let j = i;
+      while (j < lines.length && !lines[j].trim()) j++;
+      if (j >= lines.length) break;
+      const ind = indentWidth(lines[j]);
+      if (ind > baseIndent && items.length) { i = j; continue; }        // stays in this item
+      if (ind === baseIndent && itemRe.test(lines[j].trim())) { i = j; continue; } // loose list
+      break;
+    }
+
+    const ind = indentWidth(raw);
+    const t = raw.trim();
+
+    if (ind === baseIndent && itemRe.test(t)) {
+      items.push([t.replace(itemRe, '')]);
+      i++;
+      continue;
+    }
+    if (ind > baseIndent && items.length) {             // nested block / continuation
+      items[items.length - 1].push(raw);
+      i++;
+      continue;
+    }
+    if (items.length && anyItemRe.test(t)) break;       // other list type at same indent
+    if (items.length && ind === baseIndent) {           // lazy paragraph continuation
+      items[items.length - 1].push(t);
+      i++;
+      continue;
+    }
+    break;
+  }
+
+  let html = ordered ? '<ol>' : '<ul>';
+  items.forEach((parts) => {
+    const rest = parts.slice(1).map((l) => dedentLine(l, baseIndent));
+    const restHasBlocks = rest.some((l) => !l.trim() || isMdBlockStart(l));
+    // A plain item stays a single inline line; items carrying nested
+    // blocks (sub-lists, quotes…) get the full block renderer after it.
+    const inner = restHasBlocks
+      ? inlineMd(parts[0], needle) + renderNotebookMd(rest.join('\n'), needle)
+      : [parts[0], ...rest].map((l) => inlineMd(l.trim(), needle)).join('<br>');
+    html += `<li>${inner}</li>`;
+  });
+  html += ordered ? '</ol>' : '</ul>';
+  return { html, next: i };
+}
+
+/* Block-level markdown → HTML. */
+function renderNotebookMd(md, needle) {
+  needle = needle || '';
+  const lines = String(md).split(/\r?\n/);
+  let out = '', i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const t = line.trim();
+
+    if (!t) { i++; continue; }
+
+    const fence = /^(`{3,}|~{3,})/.exec(t);             // fenced code block
+    if (fence) {
+      const sym = fence[1][0], len = fence[1].length;
+      const closeRe = new RegExp('^' + sym + '{' + len + ',}\\s*$');
+      i++;
+      const buf = [];
+      while (i < lines.length) {
+        if (closeRe.test(lines[i].trim())) { i++; break; }
+        buf.push(lines[i]);
+        i++;
+      }
+      out += `<pre><code>${esc(buf.join('\n'))}</code></pre>`;
+      continue;
+    }
+
+    const h = /^(#{1,6})(?:\s+|$)(.*)$/.exec(t);        // ATX heading
+    if (h) {
+      const lvl = h[1].length;
+      out += `<h${lvl}>${inlineMd(h[2].replace(/\s+#+\s*$/, ''), needle)}</h${lvl}>`;
+      i++;
+      continue;
+    }
+
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(t) ||             // thematic break
+        /^([-*_])(?:\s*\1){2,}$/.test(t)) {
+      out += '<hr>';
+      i++;
+      continue;
+    }
+
+    if (/^\s*>/.test(line)) {                           // blockquote (nested via recursion)
+      const buf = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) {
+        buf.push(lines[i].replace(/^\s*>\s?/, ''));
+        i++;
+      }
+      out += `<blockquote>${renderNotebookMd(buf.join('\n'), needle)}</blockquote>`;
+      continue;
+    }
+
+    if (/^\s*\|/.test(line) && i + 1 < lines.length &&  // GFM table
+        /^\s*\|?[\s:|-]+$/.test(lines[i + 1].trim()) && lines[i + 1].includes('-')) {
+      const cells = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|')
+        .map((c) => c.trim());
+      const head = cells(t);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].trim() && /^\s*\|/.test(lines[i])) {
+        rows.push(cells(lines[i]));
+        i++;
+      }
+      out += '<table><thead><tr>' +
+        head.map((c) => `<th>${inlineMd(c, needle)}</th>`).join('') + '</tr></thead><tbody>' +
+        rows.map((r) => '<tr>' + r.map((c) => `<td>${inlineMd(c, needle)}</td>`).join('') +
+          '</tr>').join('') + '</tbody></table>';
+      continue;
+    }
+
+    if (/^([-*+]|\d{1,9}[.)])\s+/.test(t)) {            // list
+      const parsed = parseMdList(lines, i, indentWidth(line), needle);
+      out += parsed.html;
+      i = parsed.next;
+      continue;
+    }
+
+    const nxt = i + 1 < lines.length ? lines[i + 1].trim() : '';   // setext heading
+    if (nxt && /^={2,}$/.test(nxt)) { out += `<h1>${inlineMd(t, needle)}</h1>`; i += 2; continue; }
+    if (nxt && /^-{2,}$/.test(nxt) && !/^\s*\|/.test(line)) {
+      out += `<h2>${inlineMd(t, needle)}</h2>`; i += 2; continue;
+    }
+
+    const buf = [];                                     // paragraph (soft breaks → <br>)
+    while (i < lines.length && lines[i].trim() && !isMdBlockStart(lines[i])) {
+      buf.push(lines[i].trim());
+      i++;
+    }
+    if (buf.length) {
+      out += `<p>${buf.map((l) => inlineMd(l, needle)).join('<br>')}</p>`;
+    } else {
+      i++;
+    }
+  }
+  return out;
+}
+
+/* ============================================================
+   6.2 NOTEBOOK RENDER
+   ============================================================ */
+
+function renderNotebook() {
+  const c = $('#notebook');
+  const status = $('#nb-status');
+  const needle = currentNotebookFilter();
+  const data = notebookData(needle);
+
+  let html = '';
+  data.forEach((sub) => {
+    const subjectText = inlineMd(sub.name, needle);
+    const withAnswer = sub.topics.filter((t) => t.answer).length;
+
+    let body = '';
+    sub.topics.forEach((t) => {
+      body += `<div class="nb-topic">` +
+        `<div class="nb-h2"><span class="nb-hash">##</span>` +
+        `<span class="nb-num">${t.n}.</span>` +
+        `<span class="nb-text">${inlineMd(t.text, needle)}</span></div>` +
+        (t.answer
+          ? `<div class="nb-body">${renderNotebookMd(t.answer, needle)}</div>`
+          : `<div class="nb-missing">No answer imported for this topic.</div>`) +
+        `</div>`;
+    });
+
+    html += `<section class="nb-subject">` +
+      `<div class="nb-h1"><span class="nb-hash">#</span>` +
+      `<span class="nb-text">${subjectText}</span></div>` +
+      `<div class="nb-count">${sub.topics.length} topic(s) · ${withAnswer} with an imported answer</div>` +
+      `<div class="nb-topics">${body}</div></section>`;
+  });
+
+  c.innerHTML = html ||
+    `<div class="panel"><span class="hint">${state.subjects.length
+      ? 'Nothing matches this filter.'
+      : 'Import a question bank first — every subject, topic and answer will be listed here in import order.'}</span></div>`;
+
+  const total = state.subjects.reduce((n, s) => n + (s.topics || []).length, 0);
+  const shownTopics = data.reduce((n, s) => n + s.topics.length, 0);
+  const shownAnswer = data.reduce((n, s) => n + s.topics.filter((t) => t.answer).length, 0);
+  status.textContent = !state.subjects.length
+    ? ''
+    : needle
+      ? `Filter “${needle}” — showing ${shownTopics} of ${total} topic(s) across ${data.length} subject(s).`
+      : `${data.length} subject(s) · ${shownTopics} topic(s) · ${shownAnswer} with an imported answer — in import order.`;
+}
+
+/* Same data as plain Markdown, for the copy button. */
+function notebookMarkdown(data) {
+  const out = [];
+  data.forEach((sub) => {
+    out.push(`# ${sub.name}`);
+    sub.topics.forEach((t) => {
+      out.push('', `## ${t.n}. ${t.text}`);
+      if (t.answer) out.push(t.answer);
+    });
+    out.push('');
+  });
+  return out.join('\n').trim() + (out.length ? '\n' : '');
+}
+
+/* ============================================================
+   7. MENUS / UI WIRING
    ============================================================ */
 
 function closeMenus() { $$('.menu').forEach((m) => m.classList.remove('open')); }
@@ -993,7 +1470,18 @@ $$('.tabs button').forEach((b) => {
     $$('.tabs button').forEach((x) => x.classList.toggle('active', x === b));
     $('#tab-poll').hidden = b.dataset.tab !== 'poll';
     $('#tab-written').hidden = b.dataset.tab !== 'written';
+    $('#tab-notebook').hidden = b.dataset.tab !== 'notebook';
+    if (b.dataset.tab === 'notebook') renderNotebook();
   });
+});
+
+$('#nb-filter').addEventListener('input', renderNotebook);
+$('#btn-nb-copy').addEventListener('click', async () => {
+  const data = notebookData(currentNotebookFilter());
+  const ok = await copyToClipboard(notebookMarkdown(data));
+  $('#nb-status').textContent = ok
+    ? '📋 Notebook copied to clipboard as Markdown.'
+    : '⚠️ Clipboard unavailable.';
 });
 
 $('#md-file').addEventListener('change', (e) => {
@@ -1058,7 +1546,7 @@ $('#btn-clear').addEventListener('click', () => {
   state.poll = { items: [], answered: 0, correct: 0 };
   state.written = [];
   localStorage.removeItem('examai.questions');
-  renderTopicList(); renderPoll(); renderWritten(); refreshImportStatus();
+  renderTopicList(); renderPoll(); renderWritten(); renderNotebook(); refreshImportStatus();
   $('#written-status').textContent = '';
 });
 
@@ -1127,7 +1615,7 @@ $('#btn-poll-reset').addEventListener('click', resetPoll);
 $('#btn-gen').addEventListener('click', generateWritten);
 
 /* ============================================================
-   7. PROMPT GUIDE + DEFAULT SAMPLE BANK
+   8. PROMPT GUIDE + DEFAULT SAMPLE BANK
    ============================================================ */
 
 const PROMPT_GUIDE = [
@@ -1332,7 +1820,7 @@ const SAMPLE_MD = [
 ].join('\n');
 
 /* ============================================================
-   8. BOOT
+   9. BOOT
    ============================================================ */
 
 loadQuestions();
@@ -1340,6 +1828,7 @@ loadApiIntoForm();
 renderTopicList();
 renderPoll();
 renderWritten();
+renderNotebook();
 refreshImportStatus();
 
 window.ExamAI = {
@@ -1349,6 +1838,10 @@ window.ExamAI = {
   state,
   importMarkdown,
   generateWritten,
+  renderNotebook,
+  renderNotebookMd,
+  notebookMarkdown,
+  notebookData,
   handleFile,
   PROMPT_GUIDE,
   SAMPLE_MD,
