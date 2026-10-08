@@ -185,6 +185,47 @@
              background:var(--bg)}
   #nb-filter::-webkit-search-cancel-button{filter:invert(.7)}
 
+  /* ---------- notebook topic rail: quick-jump notches on the right ---------- */
+  .nb-wrap{display:flex;gap:16px;align-items:flex-start}
+  /* Fixed basis (220px default rail + 16px gap = 236px) keeps the text block
+     still: the rail's left edge never moves, so widening grows to the right.
+     Keep 236 in sync with RAIL_W_DEFAULT + the .nb-wrap gap. */
+  #notebook{flex:0 0 calc(100% - 236px);min-width:0}
+  .nb-wrap.nb-norail #notebook{flex-basis:100%}
+  #nb-rail{position:sticky;top:74px;width:220px;flex:none;background:var(--panel);
+           border:1px solid var(--line);border-radius:var(--radius);padding:8px 6px}
+  #nb-rail[hidden]{display:none}
+  #nb-rail-list{max-height:calc(100vh - 116px);overflow-y:auto;overflow-x:hidden;
+                scrollbar-width:thin;scrollbar-color:transparent transparent}
+  #nb-rail-list:hover{scrollbar-color:var(--line) transparent}
+  #nb-rail-list::-webkit-scrollbar{width:8px}
+  #nb-rail-list::-webkit-scrollbar-track{background:transparent}
+  #nb-rail-list::-webkit-scrollbar-thumb{background:transparent;background-clip:padding-box;
+                                         border:2px solid transparent;border-radius:6px}
+  #nb-rail-list:hover::-webkit-scrollbar-thumb{background:var(--line);background-clip:padding-box}
+  #nb-rail-list:hover::-webkit-scrollbar-thumb:hover{background:var(--muted);background-clip:padding-box}
+  .nb-rail-resize{position:absolute;right:-5px;top:0;bottom:0;width:11px;cursor:ew-resize;
+                  touch-action:none;z-index:2}
+  .nb-rail-resize::before{content:"";position:absolute;left:5px;top:0;bottom:0;width:2px;
+                          background:transparent;border-radius:2px}
+  .nb-rail-resize:hover::before,.nb-rail-resize:focus-visible::before{background:var(--acc)}
+  body.nb-resizing{user-select:none;cursor:ew-resize}
+  body.nb-resizing *{cursor:ew-resize !important}
+  .nb-rail-group+.nb-rail-group{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+  .nb-rail-title{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+                 color:var(--muted);margin:0 6px 5px;white-space:nowrap;overflow:hidden;
+                 text-overflow:ellipsis}
+  .nb-rail-item{display:block;width:100%;text-align:left;background:transparent;border:0;
+                border-radius:7px;padding:5px 7px;font-size:12.5px;line-height:1.35;
+                color:var(--muted);cursor:pointer;white-space:nowrap;overflow:hidden;
+                text-overflow:ellipsis}
+  .nb-rail-item:hover{background:var(--panel-2);color:var(--fg)}
+  .nb-rail-item.active{background:var(--panel-2);color:var(--fg);
+                       box-shadow:inset 2px 0 0 var(--acc)}
+  .nb-rail-num{color:var(--acc-2);font-weight:700;margin-right:5px}
+  .nb-topic,.nb-subject{scroll-margin-top:74px}
+  @media (max-width:900px){.nb-wrap{display:block}#nb-rail{display:none}}
+
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;
                   align-items:center;justify-content:center;z-index:100;padding:20px}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
@@ -300,7 +341,13 @@
       </div>
       <div class="hint" id="nb-status" style="margin-top:6px"></div>
     </div>
-    <div id="notebook"></div>
+    <div class="nb-wrap">
+      <div id="notebook"></div>
+      <nav id="nb-rail" aria-label="Topic navigation" hidden>
+        <div id="nb-rail-list"></div>
+        <div class="nb-rail-resize" id="nb-rail-resize" tabindex="0"></div>
+      </nav>
+    </div>
   </section>
 </main>
 
@@ -420,6 +467,8 @@ const I18N = {
     'written.noStream': '⏳ Streaming unavailable, retrying without stream…',
     'written.promptSent': 'Prompt that would have been sent',
     'nb.title': 'Notebook',
+    'nb.railLabel': 'Topic navigation',
+    'nb.railResize': 'Drag to resize · ←/→ adjust · Enter resets',
     'nb.filterPh': 'Filter subjects, topics, answers…',
     'nb.copy': '📋 Copy as Markdown',
     'nb.copied': '📋 Notebook copied to clipboard as Markdown.',
@@ -512,6 +561,8 @@ const I18N = {
     'written.noStream': '⏳ Потоковая передача недоступна, повторяем запрос без потока…',
     'written.promptSent': 'Промпт, который был бы отправлен',
     'nb.title': 'Конспект',
+    'nb.railLabel': 'Навигация по темам',
+    'nb.railResize': 'Потяните, чтобы изменить ширину · ←/→ · Enter — сброс',
     'nb.filterPh': 'Фильтр: дисциплины, темы, ответы…',
     'nb.copy': '📋 Копировать как Markdown',
     'nb.copied': '📋 Конспект скопирован в буфер обмена в формате Markdown.',
@@ -1753,14 +1804,14 @@ function renderNotebook() {
   const data = notebookData(needle);
 
   let html = '';
-  data.forEach((sub) => {
+  data.forEach((sub, si) => {
     const subjectText = inlineMd(sub.name, needle);
     const withAnswer = sub.topics.filter((t) => t.answer).length;
 
     let body = '';
     const noAnswerMsg = esc(t('nb.noAnswer'));
-    sub.topics.forEach((t) => {
-      body += `<div class="nb-topic">` +
+    sub.topics.forEach((t, ti) => {
+      body += `<div class="nb-topic" id="nb-t-${si}-${ti}">` +
         `<div class="nb-h2"><span class="nb-hash">##</span>` +
         `<span class="nb-num">${t.n}.</span>` +
         `<span class="nb-text">${inlineMd(t.text, needle)}</span></div>` +
@@ -1790,6 +1841,84 @@ function renderNotebook() {
     : needle
       ? t('nb.statusFilter', needle, shownTopics, total, data.length)
       : t('nb.statusAll', data.length, shownTopics, shownAnswer);
+
+  renderNotebookRail(data);
+}
+
+/* The rail lists one notch per visible topic; ids must match the
+   `nb-t-<subjectIndex>-<topicIndex>` ids rendered above. The notch
+   list lives in #nb-rail-list (it is the scrolling part), so the
+   resize handle can sit outside the rail's right edge. */
+function renderNotebookRail(data) {
+  const rail = $('#nb-rail');
+  rail.setAttribute('aria-label', t('nb.railLabel'));
+
+  let html = '';
+  data.forEach((sub, si) => {
+    if (!sub.topics.length) return;
+    html += `<div class="nb-rail-group">` +
+      `<div class="nb-rail-title" title="${esc(sub.name)}">${esc(sub.name)}</div>`;
+    sub.topics.forEach((tp, ti) => {
+      html += `<button class="nb-rail-item" type="button" data-target="nb-t-${si}-${ti}"` +
+        ` title="${esc(tp.text)}" aria-label="${esc(sub.name + ' — ' + tp.n + '. ' + tp.text)}">` +
+        `<span class="nb-rail-num">${tp.n}.</span>${esc(tp.text)}</button>`;
+    });
+    html += `</div>`;
+  });
+
+  $('#nb-rail-list').innerHTML = html;
+  const handle = $('#nb-rail-resize');
+  handle.title = t('nb.railResize');
+  handle.setAttribute('aria-label', t('nb.railResize'));
+  rail.hidden = !html;
+  $('.nb-wrap').classList.toggle('nb-norail', rail.hidden);
+  updateNbRailActive();
+}
+
+/* Highlight the notch of the topic under the sticky topbar. */
+function updateNbRailActive() {
+  const rail = $('#nb-rail');
+  if (rail.hidden || $('#tab-notebook').hidden) return;
+  const items = $$('.nb-rail-item', rail);
+  if (!items.length) return;
+  let best = null;
+  items.forEach((it) => {
+    const el = document.getElementById(it.dataset.target);
+    if (el && el.getBoundingClientRect().top <= 96) best = it;
+  });
+  items.forEach((it) => it.classList.toggle('active', it === (best || items[0])));
+}
+
+/* ---- rail width: inline style wins over the 220px CSS default ----
+   The rail sits in a fixed slot (notebook basis = 100% - 236px), anchored
+   on its left edge: widening pushes the right edge outward, so the clamp
+   is the distance from that left edge to the viewport edge. */
+const RAIL_W_KEY = 'examai.railW';
+const RAIL_W_DEFAULT = 220;
+
+function clampRailWidth(w) {
+  const wrap = $('.nb-wrap');
+  const wrapRight = wrap ? wrap.getBoundingClientRect().right : 0;
+  const vw = document.documentElement.clientWidth;
+  const room = wrapRight > 0
+    ? vw - (wrapRight - RAIL_W_DEFAULT)
+    : Math.min(560, Math.round(vw * 0.6));
+  return Math.max(140, Math.min(w, Math.max(140, Math.round(room))));
+}
+function railWidthPx() {
+  return parseInt($('#nb-rail').style.width, 10) || RAIL_W_DEFAULT;
+}
+function setRailWidth(w) {
+  const px = clampRailWidth(w);
+  $('#nb-rail').style.width = px + 'px';
+  return px;
+}
+function saveRailWidth() {
+  try { localStorage.setItem(RAIL_W_KEY, String(railWidthPx())); } catch (e) {}
+}
+function resetRailWidth() {
+  $('#nb-rail').style.width = '';
+  try { localStorage.removeItem(RAIL_W_KEY); } catch (e) {}
 }
 
 /* Same data as plain Markdown, for the copy button. */
@@ -1835,6 +1964,58 @@ $$('.tabs button').forEach((b) => {
 });
 
 $('#nb-filter').addEventListener('input', renderNotebook);
+
+$('#nb-rail').addEventListener('click', (e) => {
+  const btn = e.target.closest('.nb-rail-item');
+  if (!btn) return;
+  const target = document.getElementById(btn.dataset.target);
+  if (!target) return;
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+/* Drag the handle on the rail's right edge to stretch/shrink it
+   (drag right = wider). The width is kept in localStorage as examai.railW. */
+const nbRailHandle = $('#nb-rail-resize');
+let nbRailDrag = null;
+
+function endNbRailDrag() {
+  if (!nbRailDrag) return;
+  nbRailDrag = null;
+  document.body.classList.remove('nb-resizing');
+  saveRailWidth();
+}
+
+nbRailHandle.addEventListener('pointerdown', (e) => {
+  if (e.button !== undefined && e.button !== 0) return;
+  e.preventDefault();
+  nbRailDrag = { x: e.clientX, w: railWidthPx() };
+  document.body.classList.add('nb-resizing');
+  try { nbRailHandle.setPointerCapture(e.pointerId); } catch (err) {}
+});
+document.addEventListener('pointermove', (e) => {
+  if (!nbRailDrag) return;
+  setRailWidth(nbRailDrag.w + (e.clientX - nbRailDrag.x));
+});
+document.addEventListener('pointerup', endNbRailDrag);
+document.addEventListener('pointercancel', endNbRailDrag);
+nbRailHandle.addEventListener('dblclick', resetRailWidth);
+nbRailHandle.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') { e.preventDefault(); setRailWidth(railWidthPx() + 16); saveRailWidth(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); setRailWidth(railWidthPx() - 16); saveRailWidth(); }
+  else if (e.key === 'Enter' || e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); resetRailWidth(); }
+});
+try {
+  const savedRailW = parseInt(localStorage.getItem(RAIL_W_KEY), 10);
+  if (savedRailW) setRailWidth(savedRailW);
+} catch (e) {}
+
+let nbRailTick = false;
+window.addEventListener('scroll', () => {
+  if (nbRailTick) return;
+  nbRailTick = true;
+  requestAnimationFrame(() => { nbRailTick = false; updateNbRailActive(); });
+}, { passive: true });
+
 $('#btn-nb-copy').addEventListener('click', async () => {
   const data = notebookData(currentNotebookFilter());
   const ok = await copyToClipboard(notebookMarkdown(data));

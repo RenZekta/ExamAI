@@ -20,7 +20,7 @@ program, split by banner comments:
 | 3. `importMarkdown()` | Parser → state → render pipeline |
 | 4. `startPoll()` / `answerPoll()` / `buildPollFeedback()` | Section 1 — practice poll |
 | 5. `generateWritten()` / `submitWritten()` / `buildGradingMessages()` | Section 2 — written exam (the grading prompt is localized) |
-| 6. `notebookData()` / `renderNotebook()` / `notebookMarkdown()` | Section 3 — filtered snapshot, tab render, Markdown export |
+| 6. `notebookData()` / `renderNotebook()` / `notebookMarkdown()` / `renderNotebookRail()` | Section 3 — filtered snapshot, tab render, topic rail, Markdown export |
 | 6.1 `renderNotebookMd()` / `inlineMd()` / `parseMdList()` | Safe block+inline Markdown → HTML renderer used by the notebook |
 | 7. Menus, drop zone, paste modal, API form | UI wiring |
 | 8. `PROMPT_GUIDE` / `PROMPT_GUIDE_RU` / `SAMPLE_MD` | Prompt guide and built-in sample bank |
@@ -42,7 +42,8 @@ user configures.
 
 - `state` is `{ subjects: [], poll: { items, answered, correct }, written: [] }`.
 - Persistence keys: `examai.questions` (the bank), `examai.lang`,
-  `examai.base`, `examai.key`, `examai.model`.
+  `examai.base`, `examai.key`, `examai.model`, `examai.railW` (Notebook
+  rail width).
 - Boot order matters: `loadQuestions()` → tab renders → `applyLang()` last, so
   the saved language is applied to already-rendered markup.
 
@@ -153,5 +154,5 @@ node tests/check-keys.js        # i18n tables in sync
 Run the browser suite in `tests/examai.test.js` (paste into the console of a
 loaded `ExamAI.html`, or headless — see [tests/TESTS.md](tests/TESTS.md)).
 Syntax-check the extracted script with `node --check` after editing
-`ExamAI.html`. All 49 assertions should pass before a change is considered
+`ExamAI.html`. All 64 assertions should pass before a change is considered
 done.

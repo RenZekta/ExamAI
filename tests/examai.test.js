@@ -4,7 +4,7 @@
    Runs in the browser against a loaded ExamAI.html page.
 
    Usage: open ExamAI.html, open DevTools → Console, paste this
-   whole file, press Enter. See tests/tests.md for other ways
+   whole file, press Enter. See tests/TESTS.md for other ways
    to run it (including headless via agent-browser).
 
    The suite imports the built-in sample bank and starts a poll,
@@ -119,6 +119,79 @@
     nb.every((s, i) => s.name === A.state.subjects[i].name));
   eq('notebook filter: no match → 0 subjects',
     A.notebookData('zzz_no_match_zzz').length, 0);
+
+  /* ---------------------------------------------------------
+     7b. Topic rail (quick-jump notches on the right)
+     --------------------------------------------------------- */
+  const rail = document.querySelector('#nb-rail');
+  assert('rail: shown for a non-empty bank', rail && !rail.hidden);
+  eq('rail: one notch per topic',
+    document.querySelectorAll('#nb-rail .nb-rail-item').length, 9);
+  eq('rail: one group per subject',
+    document.querySelectorAll('#nb-rail .nb-rail-group').length, 3);
+  const notch = document.querySelector('#nb-rail .nb-rail-item');
+  eq('rail: notch points at a real topic id',
+    !!document.getElementById(notch.dataset.target), true);
+
+  const scrolledTo = [];
+  const origScrollIntoView = Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView = function () { scrolledTo.push(this.id); };
+  notch.click();
+  Element.prototype.scrollIntoView = origScrollIntoView;
+  eq('rail: click scrolls to that topic', scrolledTo[0], notch.dataset.target);
+
+  /* The rail mirrors whatever the filter leaves visible. */
+  const filterInput = document.querySelector('#nb-filter');
+  filterInput.value = 'zzz_no_match_zzz';
+  A.renderNotebook();
+  assert('rail: hidden when nothing matches',
+    document.querySelector('#nb-rail').hidden);
+  filterInput.value = '';
+  A.renderNotebook();
+  assert('rail: restored after clearing the filter',
+    !document.querySelector('#nb-rail').hidden);
+
+  /* ---------------------------------------------------------
+     7c. Rail width (drag the handle on the rail's right edge)
+     --------------------------------------------------------- */
+  const railBox = document.querySelector('#nb-rail');
+  const railHandle = document.querySelector('#nb-rail-resize');
+  const notebookEl = document.querySelector('#notebook');
+  assert('rail resize: handle present', !!railHandle);
+
+  /* Geometry needs the tab on screen. */
+  document.querySelector('.tabs button[data-tab=notebook]').click();
+  localStorage.removeItem('examai.railW');
+  railBox.style.width = '';
+
+  const nbWidthBefore = Math.round(notebookEl.getBoundingClientRect().width);
+  const railLeftBefore = Math.round(railBox.getBoundingClientRect().left);
+
+  railHandle.dispatchEvent(new PointerEvent('pointerdown',
+    { clientX: 600, button: 0, bubbles: true }));
+  document.dispatchEvent(new PointerEvent('pointermove',
+    { clientX: 610, bubbles: true }));
+  document.dispatchEvent(new PointerEvent('pointerup',
+    { clientX: 610, bubbles: true }));
+  eq('rail resize: dragging right widens the rail', railBox.style.width, '230px');
+  eq('rail resize: width persisted to localStorage',
+    localStorage.getItem('examai.railW'), '230');
+  eq('rail resize: notebook text block keeps its width',
+    Math.round(notebookEl.getBoundingClientRect().width), nbWidthBefore);
+  eq('rail resize: rail grows to the right (left edge fixed)',
+    Math.round(railBox.getBoundingClientRect().left), railLeftBefore);
+  assert('rail resize: no horizontal page overflow',
+    document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    `scrollWidth=${document.documentElement.scrollWidth} ` +
+    `clientWidth=${document.documentElement.clientWidth}`);
+
+  railHandle.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+  eq('rail resize: double-click resets to the default',
+    railBox.style.width, '');
+  eq('rail resize: reset clears the saved width',
+    localStorage.getItem('examai.railW'), null);
+
+  document.querySelector('.tabs button[data-tab=poll]').click();
 
   /* ---------------------------------------------------------
      8. Language switching

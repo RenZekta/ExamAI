@@ -6,7 +6,7 @@ dependencies, so the suite is a plain script you run against a loaded
 
 | File | What it does |
 |---|---|
-| [`examai.test.js`](examai.test.js) | The main suite (49 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, language switching, and poll-state survival across a language switch. |
+| [`examai.test.js`](examai.test.js) | The main suite (64 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, the topic rail and its resize handle, language switching, and poll-state survival across a language switch. |
 | [`check-keys.js`](check-keys.js) | Static check, runs in Node: every i18n key referenced in `ExamAI.html` exists in both `I18N` tables, and both tables declare exactly the same keys. |
 
 ## Running the suite
@@ -54,6 +54,15 @@ EN/RU tables are in sync; anything else prints the offending keys.
 - **Section 2** — one card per subject with default settings, status line.
 - **Notebook** — Markdown rendering, `javascript:` URLs neutralised, raw
   HTML escaped, import order preserved, filter narrows to zero on no match.
+- **Topic rail** — one notch per visible topic grouped by subject, each notch
+  points at a real topic id, clicking it scrolls to that topic, and the rail
+  follows the filter (hidden on no match, restored when the filter clears).
+- **Rail resize** — the handle on the rail's right edge widens it by the drag
+  distance, the width is persisted to `localStorage`, and double-click
+  restores the default width and clears the saved value. The rail is
+  anchored on its left edge, so widening it never reflows the notebook text
+  block (its width stays constant) and never overflows the page
+  horizontally.
 - **Language** — `setLang`/`getLang`, `<html lang>`, translated labels and
   `document.title`, active-language menu marker, prompt guide switch,
   identical EN/RU key sets, unknown codes rejected.

@@ -80,6 +80,7 @@ The imported baseline answer, rendered as real Markdown.
 - **Answers are rendered as real Markdown**, not shown as plain text: `#`–`######` (ATX) and setext headings, ordered/unordered/nested lists, blockquotes, GFM tables, fenced code blocks, `---` rules, `**bold**`, `*italic*`, `~~strikethrough~~`, `` `code` ``, links and images. Links/images are restricted to `http(s)` and `mailto:` URLs, and all source text is HTML-escaped first, so a hostile `.md` cannot inject markup.
 - **Poll questions and their options are intentionally not shown** — this tab is pure study notes (topic → answer).
 - The **filter box** narrows subjects, topics and answers and highlights every match; if the subject itself matches, all of its topics stay visible.
+- The **topic rail** on the right lists one notch per visible topic, grouped by subject. Click one to scroll straight to that topic; the notch of the topic you are currently reading stays highlighted. Drag the handle on its right edge to stretch the rail (right = wider, left = narrower; double-click or **Enter** restores the default, **←/→** nudges it) — widening pushes the rail's right edge outward and the notebook text never reflows. The width is remembered, and the rail's scrollbar stays collapsed until you hover it. (On narrow screens the rail is hidden — use the filter box instead.)
 - **📋 Copy as Markdown** puts the current (filtered) view on the clipboard as `# … / ## N. …` Markdown — the same structure the tab renders.
 
 ### Top bar
@@ -193,7 +194,7 @@ The app sends `temperature: 0.2` and (for streaming) `stream: true`.
 
 Tests live in the [`tests/`](tests/) folder, so this README stays readable:
 
-- [`tests/examai.test.js`](tests/examai.test.js) — the main suite (49 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, language switching, and answered poll state surviving a language switch.
+- [`tests/examai.test.js`](tests/examai.test.js) — the main suite (64 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, the topic rail and its resize handle, language switching, and answered poll state surviving a language switch.
 - [`tests/check-keys.js`](tests/check-keys.js) — static i18n check, run with `node tests/check-keys.js`: every key referenced in the app exists in both language tables, and the EN/RU tables declare exactly the same keys.
 
 See [`tests/TESTS.md`](tests/TESTS.md) for how to run them (browser console or headless) and what each assertion covers. For your own scripts the app exposes a `window.ExamAI` test API — `parseMarkdown`, `importMarkdown`, `state`, `t`, `setLang`, `promptGuide`, `notebookData` and the rest, listed in [Agents.md](Agents.md).
