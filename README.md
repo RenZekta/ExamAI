@@ -1,6 +1,6 @@
 # ExamAI
 
-**English** | [Russian version](README.ru.md)
+**English** | [Русский](README.ru.md)
 
 A single-file, self-contained web app for exam preparation. It gives you two independent study modes plus a read-only Notebook, all backed by a Markdown question bank you build (or let an AI build for you):
 
