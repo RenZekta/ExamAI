@@ -22,10 +22,11 @@ program, split by banner comments:
 | 5. `generateWritten()` / `submitWritten()` / `buildGradingMessages()` | Section 2 — written exam (the grading prompt is localized) |
 | 6. `notebookData()` / `renderNotebook()` / `notebookMarkdown()` / `renderNotebookRail()` | Section 3 — filtered snapshot, tab render, topic rail, Markdown export |
 | 6.1 `renderNotebookMd()` / `inlineMd()` / `parseMdList()` | Safe block+inline Markdown → HTML renderer used by the notebook |
+| 6.3 `notebookAskContext()` / `buildExplainMessages()` / `runNbAsk()` | Section 3 — mouse selection → "Ask AI" pill, the topics it touched, and the streamed explanation |
 | 7. Menus, drop zone, paste modal, API form | UI wiring |
 | 8. `PROMPT_GUIDE` / `PROMPT_GUIDE_RU` / `SAMPLE_MD` | Prompt guide and built-in sample bank |
 | 9. Boot | Restore persisted state, render tabs, `applyLang()`, publish `window.ExamAI` |
-| `callAI()` / `callAIStream()` / `fetchFirstModel()` | OpenAI-compatible transport (Section 2) |
+| `callAI()` / `callAIStream()` / `fetchFirstModel()` | OpenAI-compatible transport (Sections 2 and 3); both calls take an optional `{ signal }` so a request can be cancelled |
 | `renderMarkdownLite()` | Tiny, safe Markdown → HTML renderer for AI feedback |
 
 No frameworks, no bundlers, no network calls except to the LLM endpoint the
@@ -71,6 +72,10 @@ cannot be read as a stream, or a non-2xx status, falls back to a single
 - Dynamic statuses are stored as descriptors `{ key, args, cls }` rather than
   rendered text, so a language switch can re-render them.
 - The imported bank is data: it is never translated.
+- `#notebook` topic blocks are numbered `nb-t-<filteredSubjectIdx>-<filteredTopicIdx>`
+  while rendering. Both the topic rail and the Ask AI selection resolve those
+  ids against the snapshot `renderNotebook()` built, so changing the numbering
+  means updating `renderNotebookRail()` and `notebookTopicById()` together.
 - The notebook Markdown renderer escapes all source text before building
   HTML, and restricts link/image URLs to `http(s)` and `mailto:`.
 - `window.ExamAI` is the test API — see below. Anything exported there is
@@ -91,6 +96,8 @@ Published at the end of boot (section 9):
 | `renderNotebook` | `() => void` — re-renders the Notebook tab |
 | `renderNotebookMd` | `(md: string, filter?: string) => html` |
 | `notebookData` | `(filter: string) => subjects[]` — snapshot in import order |
+| `notebookAskContext` | `(selection) => { selection, topics: [{ subject, n, text, answer }] } \| null` — every topic the selection overlaps, in document order |
+| `buildExplainMessages` | `(ctx) => messages[]` — the "explain this highlight" prompt in the current language |
 | `notebookMarkdown` | `(data) => "# Subject\n\n## 1. Topic\n<answer>"` |
 | `handleFile` | `(file: File) => void` |
 | `PROMPT_GUIDE` / `PROMPT_GUIDE_RU` | `string` — prompt guide per language |
@@ -154,5 +161,5 @@ node tests/check-keys.js        # i18n tables in sync
 Run the browser suite in `tests/examai.test.js` (paste into the console of a
 loaded `ExamAI.html`, or headless — see [tests/TESTS.md](tests/TESTS.md)).
 Syntax-check the extracted script with `node --check` after editing
-`ExamAI.html`. All 64 assertions should pass before a change is considered
+`ExamAI.html`. All 82 assertions should pass before a change is considered
 done.

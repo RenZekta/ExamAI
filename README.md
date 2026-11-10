@@ -6,7 +6,7 @@ A single-file, self-contained web app for exam preparation. It gives you two ind
 
 1. **Practice poll** — multiple-choice drilling with instant verdicts, per-option reasoning, and a running score.
 2. **Written exam** — free-form answers graded by an LLM, with streaming feedback, a supportive tone, and an optional per-topic baseline answer to compare against.
-3. **Notebook** — the whole imported bank rendered as Markdown notes: every subject, every topic and its answer, in import order.
+3. **Notebook** — the whole imported bank rendered as Markdown notes: every subject, every topic and its answer, in import order. Select any passage there and **💡 Ask AI** explains it in the context of the topic(s) it came from.
 
 No build step, no dependencies, no server. Open the `.html` file in a browser and go.
 
@@ -81,6 +81,7 @@ The imported baseline answer, rendered as real Markdown.
 - **Poll questions and their options are intentionally not shown** — this tab is pure study notes (topic → answer).
 - The **filter box** narrows subjects, topics and answers and highlights every match; if the subject itself matches, all of its topics stay visible.
 - The **topic rail** on the right lists one notch per visible topic, grouped by subject. Click one to scroll straight to that topic; the notch of the topic you are currently reading stays highlighted. Drag the handle on its right edge to stretch the rail (right = wider, left = narrower; double-click or **Enter** restores the default, **←/→** nudges it) — widening pushes the rail's right edge outward and the notebook text never reflows. The width is remembered, and the rail's scrollbar stays collapsed until you hover it. (On narrow screens the rail is hidden — use the filter box instead.)
+- **💡 Ask AI over a selection** — select any text in the notebook (mouse, double-click or Shift+arrows) and a floating **Ask AI** pill appears next to it. Clicking it opens a modal that shows which topics the selection touched plus your highlight, and streams an explanation of *just that passage* in their context: a selection that runs from one topic into the next sends **both** topics in full, and a selection spanning two subjects sends both subjects. The prompt asks for plain words → every term defined → how it fits the topic → an example/exam angle → a few self-check questions, in the language of the highlight. `Close` (or `Esc`) also cancels a request in flight; errors can be expanded to show the exact prompt and retried.
 - **📋 Copy as Markdown** puts the current (filtered) view on the clipboard as `# … / ## N. …` Markdown — the same structure the tab renders.
 
 ### Top bar
@@ -164,7 +165,7 @@ The prompt guide covers:
 
 ## API setup
 
-Section 2 talks to any OpenAI-compatible `/chat/completions` endpoint with streaming support. The default preset targets XLM Studio/LM Studio running locally.
+Sections 2 and 3 talk to any OpenAI-compatible `/chat/completions` endpoint with streaming support. The default preset targets XLM Studio/LM Studio running locally.
 
 Open **⚙️ API** and fill in:
 
@@ -194,7 +195,7 @@ The app sends `temperature: 0.2` and (for streaming) `stream: true`.
 
 Tests live in the [`tests/`](tests/) folder, so this README stays readable:
 
-- [`tests/examai.test.js`](tests/examai.test.js) — the main suite (64 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, the topic rail and its resize handle, language switching, and answered poll state surviving a language switch.
+- [`tests/examai.test.js`](tests/examai.test.js) — the main suite (82 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, the topic rail and its resize handle, the Notebook "Ask AI" selection context and prompt, language switching, and answered poll state surviving a language switch.
 - [`tests/check-keys.js`](tests/check-keys.js) — static i18n check, run with `node tests/check-keys.js`: every key referenced in the app exists in both language tables, and the EN/RU tables declare exactly the same keys.
 
 See [`tests/TESTS.md`](tests/TESTS.md) for how to run them (browser console or headless) and what each assertion covers. For your own scripts the app exposes a `window.ExamAI` test API — `parseMarkdown`, `importMarkdown`, `state`, `t`, `setLang`, `promptGuide`, `notebookData` and the rest, listed in [Agents.md](Agents.md).

@@ -250,6 +250,71 @@
   }
 
   /* ---------------------------------------------------------
+     10. Notebook — "Ask AI" over a mouse selection
+     --------------------------------------------------------- */
+  document.querySelector('.tabs button[data-tab=notebook]').click();
+  const askBar = document.querySelector('#nb-ask-toolbar');
+  const askModal = document.querySelector('#nb-ask-modal');
+  assert('ask: selection pill and answer modal exist', !!askBar && !!askModal);
+  assert('ask: answer modal starts hidden', askModal && askModal.hidden);
+
+  const nbTouched = document.querySelectorAll('#notebook .nb-topic');
+  assert('ask: notebook topics to select from', nbTouched.length > 1, `got ${nbTouched.length}`);
+
+  const visSel = window.getSelection();
+
+  /* one topic: the answer block of the first topic */
+  const soloRange = document.createRange();
+  soloRange.selectNodeContents(nbTouched[0].querySelector('.nb-body'));
+  visSel.removeAllRanges();
+  visSel.addRange(soloRange);
+  const solo = A.notebookAskContext(visSel);
+  assert('ask: a selection inside one topic gives one topic',
+    solo && solo.topics.length === 1, solo ? `got ${solo.topics.length}` : 'no context');
+  eq('ask: topic number matches the heading', solo && solo.topics[0].n, 1);
+  eq('ask: subject of the touched topic', solo && solo.topics[0].subject, 'Теория государства и права');
+  assert('ask: context carries the selection text',
+    solo && solo.selection.includes('Функции ТГП'), solo && solo.selection.slice(0, 40));
+  assert('ask: context carries the topic answer in full',
+    solo && solo.topics[0].answer.includes('Методология ТГП'));
+
+  /* across two topics: both are carried, in document order */
+  const spanStart = nbTouched[0].querySelector('.nb-h2 .nb-text').firstChild;
+  const spanEnd = nbTouched[1].querySelector('.nb-h2 .nb-text').firstChild;
+  const spanRange = document.createRange();
+  spanRange.setStart(spanStart, 0);
+  spanRange.setEnd(spanEnd, spanEnd.length);
+  visSel.removeAllRanges();
+  visSel.addRange(spanRange);
+  const span = A.notebookAskContext(visSel);
+  eq('ask: a selection crossing two topics touches both', span && span.topics.length, 2);
+  eq('ask: touched topics come back in document order',
+    span && span.topics.map((tp) => tp.n).join(','), '1,2');
+
+  visSel.removeAllRanges();
+  eq('ask: an empty selection gives no context', A.notebookAskContext(visSel), null);
+
+  /* the prompt: topics as context, selection as the thing to explain */
+  const askMsgs = A.buildExplainMessages(span);
+  eq('ask: system + user message', askMsgs.map((m) => m.role).join(','), 'system,user');
+  assert('ask: prompt names the discipline', askMsgs[0].content.includes('Теория государства и права'));
+  assert('ask: prompt says the highlight spans two topics',
+    /2 topics/.test(askMsgs[0].content));
+  assert('ask: prompt carries both topic titles',
+    askMsgs[1].content.includes(span.topics[0].text) &&
+      askMsgs[1].content.includes(span.topics[1].text));
+  assert('ask: prompt carries the full baseline of the first topic',
+    askMsgs[1].content.includes('Методология ТГП'));
+  assert('ask: prompt carries the highlighted passage',
+    askMsgs[1].content.includes(span.selection));
+
+  A.setLang('ru');
+  assert('ask: prompt follows the interface language',
+    A.buildExplainMessages(span)[0].content !== askMsgs[0].content &&
+      /Термины/.test(A.buildExplainMessages(span)[0].content));
+  A.setLang('en');
+
+  /* ---------------------------------------------------------
      Report
      --------------------------------------------------------- */
   const failed = results.filter((r) => !r.ok);

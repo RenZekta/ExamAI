@@ -226,6 +226,22 @@
   .nb-topic,.nb-subject{scroll-margin-top:74px}
   @media (max-width:900px){.nb-wrap{display:block}#nb-rail{display:none}}
 
+  /* ---------- notebook: mouse selection → floating "Ask AI" pill ---------- */
+  #nb-ask-toolbar{position:fixed;left:0;top:0;z-index:65}
+  .nb-ask-btn{background:var(--acc);border:1px solid var(--acc);border-radius:999px;color:#fff;
+              padding:7px 13px;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;
+              box-shadow:0 10px 24px rgba(0,0,0,.45)}
+  .nb-ask-btn:hover{background:var(--acc-2);border-color:var(--acc-2)}
+  #nb-ask-modal .modal{width:min(860px,100%)}
+  .nb-ask-meta{background:var(--bg);border:1px solid var(--line);border-radius:9px;
+               padding:10px 12px;margin-bottom:10px;max-height:26vh;overflow:auto}
+  .nb-ask-topics{list-style:none;margin:0 0 2px;padding:0;display:grid;gap:5px}
+  .nb-ask-topics li{display:flex;gap:8px;align-items:baseline;font-size:13.5px;line-height:1.45}
+  .nb-ask-topics .chip{flex:none}
+  .nb-ask-quote{white-space:pre-wrap;font-size:13.5px;border-left:3px solid var(--acc-2);
+                padding-left:10px;margin:0;max-height:120px;overflow:auto}
+  #nb-ask-out{flex:1 1 auto;min-height:140px;max-height:44vh;overflow:auto}
+
   .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;
                   align-items:center;justify-content:center;z-index:100;padding:20px}
   .modal{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
@@ -340,6 +356,7 @@
         <button class="btn" id="btn-nb-copy" type="button" data-i18n="nb.copy">📋 Copy as Markdown</button>
       </div>
       <div class="hint" id="nb-status" style="margin-top:6px"></div>
+      <div class="hint" style="margin-top:4px" data-i18n="nb.askHint">Tip: select any text in the notebook — an “Ask AI” button appears next to it.</div>
     </div>
     <div class="nb-wrap">
       <div id="notebook"></div>
@@ -350,6 +367,31 @@
     </div>
   </section>
 </main>
+
+<!-- Floating pill shown while text inside the notebook is selected. -->
+<div id="nb-ask-toolbar" hidden>
+  <button class="nb-ask-btn" id="btn-nb-ask" type="button" data-i18n="nb.askBtn">💡 Ask AI</button>
+</div>
+
+<div class="modal-backdrop" id="nb-ask-modal" hidden>
+  <div class="modal">
+    <h3 data-i18n="nb.askTitle">💡 Ask AI — explain the selection</h3>
+    <div class="nb-ask-meta">
+      <div class="notes-title" data-i18n="nb.askTopics">Topics the selection touches</div>
+      <ul class="nb-ask-topics" id="nb-ask-topics"></ul>
+      <div class="notes-title" data-i18n="nb.askHighlight">Your selection</div>
+      <div class="nb-ask-quote" id="nb-ask-quote"></div>
+    </div>
+    <div class="notes-title" data-i18n="nb.askAnswer">Explanation</div>
+    <div class="ai-out" id="nb-ask-out"></div>
+    <div class="row">
+      <button class="btn" id="btn-nb-ask-copy" type="button" disabled data-i18n="nb.askCopy">📋 Copy answer</button>
+      <span class="hint" id="nb-ask-note"></span>
+      <span class="spacer"></span>
+      <button class="btn primary" id="btn-nb-ask-close" type="button" data-i18n="nb.askClose">Close</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal-backdrop" id="paste-modal" hidden>
   <div class="modal">
@@ -479,6 +521,18 @@ const I18N = {
     'nb.count': '{0} topic(s) · {1} with an imported answer',
     'nb.statusFilter': 'Filter “{0}” — showing {1} of {2} topic(s) across {3} subject(s).',
     'nb.statusAll': '{0} subject(s) · {1} topic(s) · {2} with an imported answer — in import order.',
+    'nb.askBtn': '💡 Ask AI',
+    'nb.askHint': 'Tip: select any text in the notebook — an “Ask AI” button appears next to it.',
+    'nb.askTitle': '💡 Ask AI — explain the selection',
+    'nb.askTopics': 'Topics the selection touches',
+    'nb.askHighlight': 'Your selection',
+    'nb.askAnswer': 'Explanation',
+    'nb.askCopy': '📋 Copy answer',
+    'nb.askClose': 'Close',
+    'nb.askCopied': '📋 Explanation copied to clipboard.',
+    'nb.askClipFail': '⚠️ Clipboard unavailable.',
+    'nb.askAnalyzing': '⏳ Preparing the explanation…',
+    'nb.askNoAnswer': '(no answer text was imported for this topic)',
     'modal.title': 'Paste Markdown question bank',
     'modal.import': 'Import',
     'modal.cancel': 'Cancel',
@@ -573,6 +627,18 @@ const I18N = {
     'nb.count': '{0} тем · {1} с импортированным ответом',
     'nb.statusFilter': 'Фильтр «{0}» — показано {1} из {2} тем по {3} дисциплинам.',
     'nb.statusAll': '{0} дисциплин · {1} тем · {2} с импортированным ответом — в порядке импорта.',
+    'nb.askBtn': '💡 Спросить ИИ',
+    'nb.askHint': 'Подсказка: выделите любой текст в конспекте — рядом появится кнопка «Спросить ИИ».',
+    'nb.askTitle': '💡 Спросить ИИ — объяснение выделенного',
+    'nb.askTopics': 'Темы, которых касается выделение',
+    'nb.askHighlight': 'Ваше выделение',
+    'nb.askAnswer': 'Объяснение',
+    'nb.askCopy': '📋 Копировать ответ',
+    'nb.askClose': 'Закрыть',
+    'nb.askCopied': '📋 Объяснение скопировано в буфер обмена.',
+    'nb.askClipFail': '⚠️ Буфер обмена недоступен.',
+    'nb.askAnalyzing': '⏳ Готовлю объяснение…',
+    'nb.askNoAnswer': '(ответ для этой темы не импортирован)',
     'modal.title': 'Вставьте банк вопросов в формате Markdown',
     'modal.import': 'Импортировать',
     'modal.cancel': 'Отмена',
@@ -1358,12 +1424,13 @@ async function fetchFirstModel(cfg) {
   return id;
 }
 
-async function callAI(messages) {
+async function callAI(messages, opts) {
   const cfg = getApiConfig();
   const model = cfg.model || (await fetchFirstModel(cfg));
   const res = await fetch(cfg.base + '/chat/completions', {
     method: 'POST',
     headers: authHeaders(cfg),
+    signal: opts && opts.signal,
     body: JSON.stringify({ model, messages, temperature: 0.2 }),
   });
   if (!res.ok) throw new Error(t('api.err.http', res.status, (await res.text()).slice(0, 400)));
@@ -1373,12 +1440,13 @@ async function callAI(messages) {
   return text || t('api.err.empty');
 }
 
-async function callAIStream(messages, onChunk) {
+async function callAIStream(messages, onChunk, opts) {
   const cfg = getApiConfig();
   const model = cfg.model || (await fetchFirstModel(cfg));
   const res = await fetch(cfg.base + '/chat/completions', {
     method: 'POST',
     headers: authHeaders(cfg),
+    signal: opts && opts.signal,
     body: JSON.stringify({ model, messages, temperature: 0.2, stream: true }),
   });
   if (!res.ok) throw new Error(t('api.err.http', res.status, (await res.text()).slice(0, 400)));
@@ -1797,11 +1865,20 @@ function renderNotebookMd(md, needle) {
    6.2 NOTEBOOK RENDER
    ============================================================ */
 
+/* Snapshot of what #notebook currently shows. Topic blocks are numbered
+   `nb-t-<subject>-<topic>` by their position in the *filtered* list — not by
+   `topic.n`, the number printed in the heading, which skips the topics a
+   filter hid — so resolving a rendered id back to its data has to go through
+   the snapshot that produced the DOM. */
+let nbShown = [];
+
 function renderNotebook() {
   const c = $('#notebook');
   const status = $('#nb-status');
   const needle = currentNotebookFilter();
   const data = notebookData(needle);
+  nbShown = data;
+  hideAskToolbar();
 
   let html = '';
   data.forEach((sub, si) => {
@@ -1934,6 +2011,378 @@ function notebookMarkdown(data) {
   });
   return out.join('\n').trim() + (out.length ? '\n' : '');
 }
+
+/* ============================================================
+   6.3 NOTEBOOK — "ASK AI" ABOUT A MOUSE SELECTION
+   Selecting text inside #notebook pops a floating "Ask AI" pill.
+   Clicking it sends the model the selection plus the full text of
+   every topic the selection overlaps (a drag from one topic into
+   the next carries both), and asks for an explanation of just
+   that fragment. The answer streams into a modal.
+   ============================================================ */
+
+/* nb-t-<subjectIdx>-<topicIdx> → topic data of the current snapshot; both
+   indices are positions in `nbShown`, exactly as renderNotebook numbered them. */
+function notebookTopicById(id) {
+  const m = /^nb-t-(\d+)-(\d+)$/.exec(id);
+  if (!m) return null;
+  const sub = nbShown[Number(m[1])];
+  if (!sub) return null;
+  const tp = sub.topics[Number(m[2])];
+  return tp ? { subject: sub.name, n: tp.n, text: tp.text, answer: tp.answer } : null;
+}
+
+/* -1 / 0 / 1 for the point (node, offset) relative to `range`,
+   or null when the point cannot be compared. */
+function comparePointTo(range, node, offset) {
+  try { return range.comparePoint(node, offset); } catch (e) { return null; }
+}
+
+/* True when `range` and `el` share any document position: the range starts
+   or ends inside the element, spans across it, or sits wholly within it.
+   The three cases fall out of comparePoint's -1/0/1 answer for the element's
+   two boundary points. */
+function rangeTouchesEl(range, el) {
+  const n = el.childNodes.length;
+  if (!n) return el === range.startContainer || el === range.endContainer;
+  const a = comparePointTo(range, el, 0);
+  const b = comparePointTo(range, el, n);
+  return a !== null && b !== null && a <= 0 && b >= 0;
+}
+
+/* { selection, topics[] } for the selection `sel`, or null when nothing
+   usable is selected in the notebook. Topics come back in document order. */
+function notebookAskContext(sel) {
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
+  const range = sel.getRangeAt(0);
+  const selection = (sel.toString() || '').trim();
+  if (!selection) return null;
+
+  const host = $('#notebook');
+  if (!host) return null;
+  const inNotebook = (n) => !!n && host.contains(n);
+  if (!inNotebook(sel.anchorNode) && !inNotebook(sel.focusNode)) return null;
+
+  const topics = [];
+  for (const el of $$('#notebook .nb-topic')) {
+    if (!rangeTouchesEl(range, el)) continue;
+    const topic = notebookTopicById(el.id);
+    if (topic) topics.push(topic);
+  }
+  return topics.length ? { selection, topics } : null;
+}
+
+/* The tutor prompt for one highlight: the topics are the context, the
+   selection is the thing to explain. Localized like the grading prompt —
+   the interface language picks the wording, the model is told to answer in
+   the language of the highlight. */
+function buildExplainMessages(ctx) {
+  const ru = lang === 'ru';
+  const topics = ctx.topics;
+  const multi = topics.length > 1;
+  const noAnswer = t('nb.askNoAnswer');
+  const subjects = [];
+  topics.forEach((tp) => { if (!subjects.includes(tp.subject)) subjects.push(tp.subject); });
+
+  const subjectLine = subjects.length > 1
+    ? (ru ? `Ты — поддерживающий университетский преподаватель по дисциплинам ${subjects.map((s) => `«${s}»`).join(', ')}.`
+          : `You are a supportive university tutor across the disciplines ${subjects.map((s) => `"${s}"`).join(', ')}.`)
+    : (ru ? `Ты — поддерживающий университетский преподаватель по дисциплине «${subjects[0]}».`
+          : `You are a supportive university tutor in the discipline "${subjects[0]}".`);
+
+  const system = (ru ? [
+    subjectLine,
+    multi
+      ? `Выделенный фрагмент затрагивает несколько тем сразу — учитывай все приведённые ниже.`
+      : `Опирайся на приведённый ниже материал темы.`,
+    `Студент выделил фрагмент своего конспекта и просит его объяснить. Объясни ИМЕННО выделенное, а не пересказывай тему заново.`,
+    `Раскрой значение каждого термина и каждого пункта внутри выделения, покажи, как они вписываются в тему целиком, и добавь мнемоническую связку или ракурс, под которым об этом обычно спрашивают на экзамене.`,
+    `Пиши весь ответ на ЯЗЫКЕ ВЫДЕЛЕННОГО ФРАГМЕНТА (для отрывков без связного текста — на языке темы).`,
+    `Не выдумывай фактов вопреки конспекту. Если материала мало или он двусмысленный — прямо скажи об этом.`,
+    ``,
+    `Отвечай ровно в этой структуре (Markdown):`,
+    ``,
+    `## Простыми словами`,
+    `1–2 предложения: что именно сказано в выделении.`,
+    ``,
+    `## Термины`,
+    `- **термин** — что это такое и почему важно здесь`,
+    ``,
+    `## Как это связано с темой`,
+    `- ...`,
+    ``,
+    `## Пример / экзаменационный ракурс`,
+    `- ...`,
+    ``,
+    `## Проверь себя`,
+    `- 2–3 коротких вопроса для самопроверки`,
+  ] : [
+    subjectLine,
+    multi
+      ? `The highlighted passage touches ${topics.length} topics at once — use all of the material below as context.`
+      : `Use the topic material below as your context.`,
+    `The student highlighted a passage of their own study notes and wants it explained. Explain EXACTLY the highlighted passage — do not re-summarise the whole topic.`,
+    `Unpack the meaning of every term and every item inside the highlight, show how they fit into the topic as a whole, and add a memory hook or the angle an exam question would take on it.`,
+    `Write the entire answer IN THE LANGUAGE OF THE HIGHLIGHTED PASSAGE (for fragments without prose, use the language of the topic).`,
+    `Never invent facts that contradict the notes. If the material is thin or ambiguous, say so plainly instead of filling the gap.`,
+    ``,
+    `Reply using exactly this structure (Markdown):`,
+    ``,
+    `## In plain words`,
+    `1–2 sentences: what the highlighted passage actually says.`,
+    ``,
+    `## Terms`,
+    `- **term** — what it means and why it matters here`,
+    ``,
+    `## How it fits the topic`,
+    `- ...`,
+    ``,
+    `## Example / exam angle`,
+    `- ...`,
+    ``,
+    `## Check yourself`,
+    `- 2–3 short questions to test recall`,
+  ]).join('\n');
+
+  const contextBlocks = [];
+  topics.forEach((tp) => {
+    contextBlocks.push(ru
+      ? `### Дисциплина: ${tp.subject}\n### Тема ${tp.n}. ${tp.text}\n${tp.answer || noAnswer}`
+      : `### Subject: ${tp.subject}\n### Topic ${tp.n}. ${tp.text}\n${tp.answer || noAnswer}`);
+  });
+
+  const user = (ru ? [
+    multi
+      ? `Выделение касается нескольких тем — они целиком приведены ниже:`
+      : `Тема, из которой взято выделение, целиком приведена ниже:`,
+    ``,
+    contextBlocks.join('\n\n'),
+    ``,
+    `Выделенный фрагмент:`,
+    `"""`,
+    ctx.selection,
+    `"""`,
+    ``,
+    `Объясни этот фрагмент в контексте приведённых материалов: расшифруй каждый термин и пункт, покажи его место в теме, приведи пример и экзаменационный ракурс. Пиши на языке выделенного фрагмента.`,
+  ] : [
+    multi
+      ? `The highlight spans ${topics.length} topics — their full text is below:`
+      : `The topic the highlight comes from is reproduced in full below:`,
+    ``,
+    contextBlocks.join('\n\n'),
+    ``,
+    `Highlighted passage:`,
+    `"""`,
+    ctx.selection,
+    `"""`,
+    ``,
+    `Explain this passage in the context of the material above: unpack every term and item, show where it sits in the topic, give an example and the exam angle. Answer in the language of the highlighted passage.`,
+  ]).join('\n');
+
+  return [
+    { role: 'system', content: system },
+    { role: 'user', content: user },
+  ];
+}
+
+/* ---- the floating pill ---- */
+
+let nbAskCtx = null;      // context the visible pill will ask about
+let nbAskRange = null;    // copy of the selection, so scrolling can follow it
+let nbAskRaf = 0;
+let nbAskFull = false;    // the next scheduled pass must re-read the selection
+
+const askBarEl = () => $('#nb-ask-toolbar');
+
+/* Rectangle the pill should hang off; the end of the selection is the
+   closest thing to what the user just looked at. */
+function rangeClientRect(range, sel) {
+  if (typeof range.getClientRects === 'function') {
+    const rects = range.getClientRects();
+    if (rects && rects.length) return rects[rects.length - 1];
+  }
+  if (typeof range.getBoundingClientRect === 'function') {
+    const r = range.getBoundingClientRect();
+    if (r && (r.width || r.height)) return r;
+  }
+  const node = sel && sel.anchorNode;
+  const el = node && (node.nodeType === 1 ? node : node.parentElement);
+  return el && typeof el.getBoundingClientRect === 'function'
+    ? el.getBoundingClientRect() : null;
+}
+
+function positionAskToolbar(rect) {
+  const bar = askBarEl();
+  const vw = document.documentElement.clientWidth;
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const w = bar.offsetWidth || 120;
+  const h = bar.offsetHeight || 34;
+  const cx = rect ? rect.left + rect.width / 2 : vw / 2;
+  const left = Math.max(8, Math.min(cx - w / 2, vw - w - 8));
+  const above = rect ? rect.top - h - 10 : 0;
+  const top = above >= 8 ? above : Math.max(8, Math.min(rect ? rect.bottom + 10 : 12, vh - h - 8));
+  bar.style.left = Math.round(left) + 'px';
+  bar.style.top = Math.round(top) + 'px';
+}
+
+function hideAskToolbar() {
+  const bar = askBarEl();
+  if (bar) bar.hidden = true;
+  nbAskCtx = null;
+  nbAskRange = null;
+}
+
+/* Cheap pass while the user scrolls: keep the pill glued to its text
+   without walking every topic again. */
+function placeAskToolbar() {
+  const bar = askBarEl();
+  if (!bar || bar.hidden || !nbAskRange) return;
+  positionAskToolbar(rangeClientRect(nbAskRange, null));
+}
+
+function refreshAskToolbar() {
+  const bar = askBarEl();
+  if (!bar) return;
+  const sel = typeof window.getSelection === 'function' ? window.getSelection() : null;
+  const modalOpen = $('#nb-ask-modal') && !$('#nb-ask-modal').hidden;
+  const ctx = modalOpen || $('#tab-notebook').hidden ? null : notebookAskContext(sel);
+  if (!ctx) { hideAskToolbar(); return; }
+  nbAskCtx = ctx;
+  nbAskRange = sel.getRangeAt(0).cloneRange();
+  /* Measured while parked off-screen, so the pill never flashes in the corner. */
+  bar.style.left = bar.style.top = '-9999px';
+  bar.hidden = false;
+  positionAskToolbar(rangeClientRect(nbAskRange, sel));
+}
+
+function scheduleAskToolbar(needContext) {
+  nbAskFull = nbAskFull || !!needContext;
+  if (nbAskRaf) return;
+  nbAskRaf = requestAnimationFrame(() => {
+    nbAskRaf = 0;
+    const full = nbAskFull;
+    nbAskFull = false;
+    if (full) refreshAskToolbar();
+    else placeAskToolbar();
+  });
+}
+
+/* ---- the answer modal ---- */
+
+let nbAskText = '';        // accumulated answer, for the Copy button
+let nbAskCtrl = null;      // aborts the request when the modal closes early
+let nbAskActive = null;    // context of the running/last request, for Retry
+
+function renderNbAskContext(ctx) {
+  $('#nb-ask-topics').innerHTML = ctx.topics.map((tp) =>
+    `<li><span class="chip">${esc(tp.subject)} · ${tp.n}.</span>` +
+    `<span>${inlineMd(tp.text, '')}</span></li>`).join('');
+  $('#nb-ask-quote').textContent = ctx.selection;
+}
+
+function closeNbAsk() {
+  if (nbAskCtrl) { nbAskCtrl.abort(); nbAskCtrl = null; }
+  nbAskText = '';
+  const copy = $('#btn-nb-ask-copy');
+  if (copy) copy.disabled = true;
+  const modal = $('#nb-ask-modal');
+  if (modal) modal.hidden = true;
+}
+
+function openNbAsk(ctx) {
+  nbAskActive = ctx;
+  renderNbAskContext(ctx);
+  nbAskText = '';
+  $('#nb-ask-note').textContent = '';
+  $('#btn-nb-ask-copy').disabled = true;
+  $('#nb-ask-modal').hidden = false;
+  $('#btn-nb-ask-close').focus();
+  runNbAsk(ctx);
+}
+
+async function runNbAsk(ctx) {
+  if (nbAskCtrl) nbAskCtrl.abort();
+  const ctrl = new AbortController();
+  nbAskCtrl = ctrl;
+  const isStale = () => nbAskCtrl !== ctrl || ctrl.signal.aborted;
+
+  const messages = buildExplainMessages(ctx);
+  const out = $('#nb-ask-out');
+  out.innerHTML = `<div class="spinner">${esc(t('nb.askAnalyzing'))}</div>`;
+  let acc = '';
+
+  try {
+    await callAIStream(messages, (chunk) => {
+      if (isStale()) return;
+      acc += chunk;
+      out.innerHTML = renderMarkdownLite(acc) + '<span class="streaming-cursor">▍</span>';
+    }, { signal: ctrl.signal });
+    if (isStale()) return;
+    nbAskText = acc;
+    out.innerHTML = acc.trim()
+      ? renderMarkdownLite(acc)
+      : `<div class="bad">⚠️ ${esc(t('api.err.empty'))}</div>`;
+  } catch (e) {
+    if (isStale()) return;
+    try {
+      out.innerHTML = `<div class="spinner">${esc(t('written.noStream'))}</div>`;
+      const text = await callAI(messages, { signal: ctrl.signal });
+      if (isStale()) return;
+      nbAskText = text;
+      out.innerHTML = text.trim()
+        ? renderMarkdownLite(text)
+        : `<div class="bad">⚠️ ${esc(t('api.err.empty'))}</div>`;
+    } catch (e2) {
+      if (isStale()) return;
+      out.innerHTML =
+        `<div class="bad">⚠️ ${esc(e2.message)}</div>` +
+        `<details style="margin-top:10px"><summary>${esc(t('written.promptSent'))}</summary>` +
+        `<pre style="white-space:pre-wrap;font-size:12px">${esc(JSON.stringify(messages, null, 2))}</pre></details>` +
+        `<div class="row" style="margin-top:10px"><button class="btn nb-ask-retry" type="button">${esc(t('written.retry'))}</button></div>`;
+    }
+  }
+  if (isStale()) return;
+  const copy = $('#btn-nb-ask-copy');
+  copy.disabled = !nbAskText;
+}
+
+const nbAskBar = askBarEl();
+/* mousedown is cancelled so the selection the pill belongs to survives
+   the click on it. */
+nbAskBar.addEventListener('mousedown', (e) => e.preventDefault());
+$('#btn-nb-ask').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const ctx = nbAskCtx;
+  hideAskToolbar();
+  if (ctx) openNbAsk(ctx);
+});
+
+/* selectionchange covers mouse, keyboard and double-click selections;
+   mouseup catches the drag-end some engines settle on. Scrolling only needs
+   the pill re-placed — its text has not moved, the viewport has. */
+document.addEventListener('selectionchange', () => scheduleAskToolbar(true));
+document.addEventListener('mouseup', () => scheduleAskToolbar(true));
+window.addEventListener('scroll', () => scheduleAskToolbar(false), { passive: true });
+
+$('#btn-nb-ask-close').addEventListener('click', closeNbAsk);
+$('#nb-ask-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeNbAsk();
+});
+$('#btn-nb-ask-copy').addEventListener('click', async () => {
+  const ok = await copyToClipboard(nbAskText);
+  $('#nb-ask-note').textContent = t(ok ? 'nb.askCopied' : 'nb.askClipFail');
+});
+/* Retry lives in the error block the answer area redraws, so it is
+   delegated rather than re-bound on every render. */
+$('#nb-ask-out').addEventListener('click', (e) => {
+  if (!e.target.closest('.nb-ask-retry') || !nbAskActive) return;
+  runNbAsk(nbAskActive);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if ($('#nb-ask-modal') && !$('#nb-ask-modal').hidden) closeNbAsk();
+  else hideAskToolbar();
+});
 
 /* ============================================================
    7. MENUS / UI WIRING
@@ -2519,6 +2968,8 @@ window.ExamAI = {
   renderNotebookMd,
   notebookMarkdown,
   notebookData,
+  notebookAskContext,
+  buildExplainMessages,
   handleFile,
   PROMPT_GUIDE,
   PROMPT_GUIDE_RU,

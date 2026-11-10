@@ -6,7 +6,7 @@ dependencies, so the suite is a plain script you run against a loaded
 
 | File | What it does |
 |---|---|
-| [`examai.test.js`](examai.test.js) | The main suite (64 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, the topic rail and its resize handle, language switching, and poll-state survival across a language switch. |
+| [`examai.test.js`](examai.test.js) | The main suite (82 assertions): sample-bank counts, poll-line parsing (braces, `//`, multiline options), baseline answers, Section 2 generation, Notebook rendering/export/security, the topic rail and its resize handle, the Notebook "Ask AI" selection context and its prompt, language switching, and poll-state survival across a language switch. |
 | [`check-keys.js`](check-keys.js) | Static check, runs in Node: every i18n key referenced in `ExamAI.html` exists in both `I18N` tables, and both tables declare exactly the same keys. |
 
 ## Running the suite
@@ -63,6 +63,11 @@ EN/RU tables are in sync; anything else prints the offending keys.
   anchored on its left edge, so widening it never reflows the notebook text
   block (its width stays constant) and never overflows the page
   horizontally.
+- **Ask AI selection** — a selection inside one topic yields exactly that topic,
+  a selection crossing two topics yields both in document order, an empty
+  selection yields nothing, and the explanation prompt carries the discipline,
+  both touched topic titles, the first topic's full baseline and the highlight.
+  The prompt follows the interface language.
 - **Language** — `setLang`/`getLang`, `<html lang>`, translated labels and
   `document.title`, active-language menu marker, prompt guide switch,
   identical EN/RU key sets, unknown codes rejected.
@@ -70,4 +75,5 @@ EN/RU tables are in sync; anything else prints the offending keys.
   new language after switching.
 
 Not covered (needs a live LLM): the actual AI round-trip — streaming,
-fallback to a non-streaming request, and grading quality.
+fallback to a non-streaming request, grading quality, and the Notebook
+"Ask AI" explanation.
